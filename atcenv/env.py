@@ -7,12 +7,17 @@ from atcenv.definitions import *
 from gym.envs.classic_control import rendering
 from shapely.geometry import LineString
 
+import numpy as np
+
 WHITE = [255, 255, 255]
 GREEN = [0, 255, 0]
 BLUE = [0, 0, 255]
 BLACK = [0, 0, 0]
 RED = [255, 0, 0]
 
+NUMBER_INTRUDERS_STATE = 5
+MAX_DISTANCE = 100*u.nm
+MAX_BEARING = 2*math.pi
 
 class Environment(gym.Env):
     metadata = {'render.modes': ['rgb_array']}
@@ -80,19 +85,128 @@ class Environment(gym.Env):
         Returns the reward assigned to each agent
         :return: reward assigned to each agent
         """
-        # RDC: here you should implement your reward function
-        ##########################################################
-        return []
-        ##########################################################
+        weight_a    = 1.
+        weight_b    = 1.
+        weight_c    = 1.
+        
+        conflicts   = self.conflict_penalties() * weight_a
+        drifts      = self.drift_penalties() * weight_b
+        severities  = self.conflict_severity() * weight_c 
+        
+        tot_reward  = conflicts + drifts + severities
+        return tot_reward
+
+        
+    def conflict_penalties(self):
+        """
+        Returns a list with aircraft that are in conflict,
+        can be used for multiplication as individual reward
+        component
+        :return: boolean list for conflicts
+        """
+        
+        conflicts = np.zeros(self.num_flights)
+        for i in range(self.num_flights - 1):
+            if i not in self.done:
+                if i in self.conflicts:
+                    conflicts[i] = 1
+                    
+        return conflicts
+    
+    def drift_penalties(self):
+        """
+        Returns a list with the drift angle for all aircraft,
+        can be used for multiplication as individual reward
+        component
+        :return: float of the drift angle
+        """
+        
+        drift = np.zeros(self.num_flights)
+        for i, f in enumerate(self.flights):
+            if i not in self.done:
+                drift[i] = f.drift
+        
+        return drift
+            
+    def conflict_severity(self):
+        
+        severity = np.zeros(self.num_flights)
+        for i in range(self.num_flights - 1):
+            if i not in self.done:
+                if i in self.conflicts:
+                    distances = np.array([])
+                    for j in list(self.conflicts - {i}):
+                        distance = self.flights[i].position.distance(self.flights[j].position)
+                        distances = np.append(distances,distance)
+                    #conflict severity on a scale of 0-1
+                    severity[i] = -1.*((min(distances)-self.min_distance)/self.min_distance)
+        
+        return severity
 
     def observation(self) -> List:
         """
         Returns the observation of each agent
         :return: observation of each agent
         """
+        # observations (size = 2 * NUMBER_INTRUDERS_STATE + 5):
+        # distance to closest #NUMBER_INTRUDERS_STATE intruders
+        # relative bearing to closest #NUMBER_INTRUDERS_STATE intruders
+        # current bearing
+        # current speed
+        # optimal airspeed
+        # distance to target
+        # bearing to target
+
+        observations_all = []
+
+        distance_all = np.ones((self.num_flights, self.num_flights))*MAX_DISTANCE
+        bearing_all = np.ones((self.num_flights, self.num_flights))*MAX_BEARING
+
+        for i in range(self.num_flights):
+            if i not in self.done:
+                for j in range(self.num_flights):
+                    if j not in self.done and j != i:
+                        # predicted used instead of position, so ownship can work in regard to future position and still
+                        # avoid a future conflict
+                        distance_all[i][j] = self.flights[i].prediction.distance(self.flights[j].prediction)
+
+                        # bearing
+                        dx = self.flights[i].prediction.x - self.flights[j].prediction.x
+                        dy = self.flights[i].prediction.y - self.flights[j].prediction.y
+                        compass = math.atan2(dx, dy)
+                        bearing_all[i][j] = (compass + u.circle) % u.circle
+
+        for i, f in enumerate(self.flights):
+            if i not in self.done:
+                observations = []
+
+                closest_intruders = np.argsort(distance_all[i])[:NUMBER_INTRUDERS_STATE]
+
+                # distance to closest #NUMBER_INTRUDERS_STATE
+                observations += np.take(distance_all[i], closest_intruders).tolist()
+
+                # relative bearing #NUMBER_INTRUDERS_STATE
+                observations += np.take(bearing_all[i], closest_intruders).tolist()
+
+                # current bearing
+                observations.append(f.bearing)
+
+                # current speed
+                observations.append(f.airspeed)
+
+                # optimal speed
+                observations.append(f.optimal_airspeed)
+
+                # distance to target
+                observations.append(f.position.distance(f.target))
+
+                # bearing to target
+                observations.append(f.track)
+
+                observations_all.append(observations)
         # RDC: here you should implement your observation function
         ##########################################################
-        return []
+        return observations_all
         ##########################################################
 
     def update_conflicts(self) -> None:

@@ -88,14 +88,26 @@ class Environment(gym.Env):
         weight_a    = 1.
         weight_b    = 1.
         weight_c    = 1.
+        weight_d    = 1.
         
         conflicts   = self.conflict_penalties() * weight_a
         drifts      = self.drift_penalties() * weight_b
         severities  = self.conflict_severity() * weight_c 
+        speed_dif   = self.speedDifference() * weight_d 
         
-        tot_reward  = conflicts + drifts + severities
+        tot_reward  = conflicts + drifts + severities + speed_dif
         return tot_reward
 
+    def speedDifference(self):
+        """
+        Returns a list with the diferent betwee the current aircraft and its optimal speed
+        :return: float of the speed difference
+        """
+        speed_dif = np.zeros(self.num_flights)
+        for i, f in enumerate(self.flights):
+            speed_dif[i] = abs(f.airspeed - f.optimal_airspeed)
+                    
+        return speed_dif
         
     def conflict_penalties(self):
         """

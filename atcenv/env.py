@@ -7,6 +7,7 @@ from atcenv.definitions import *
 from gym.envs.classic_control import rendering
 from shapely.geometry import LineString
 
+# our own packages
 import numpy as np
 
 WHITE = [255, 255, 255]
@@ -75,6 +76,16 @@ class Environment(gym.Env):
         :param action: list of resolution actions assigned to each flight
         :return:
         """
+
+        if len(action)!=len(self.flights):
+            return None
+
+        for i, f in enumerate(self.flights):
+            if i not in self.done:
+                # heading, speed
+                f.track = action[i][0] * MAX_BEARING
+                f.airspeed = (action[i][1]) * (self.max_speed - self.min_speed) + self.min_speed
+
         # RDC: here you should implement your resolution actions
         ##########################################################
         return None
@@ -300,7 +311,7 @@ class Environment(gym.Env):
         # (2) the maximum episode length is reached
         done = (self.i == self.max_episode_len) or (len(self.done) == self.num_flights)
 
-        return rew, obs, done, {}
+        return obs, rew, done, {}
 
     def reset(self) -> List:
         """

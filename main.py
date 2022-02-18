@@ -33,8 +33,8 @@ if __name__ == "__main__":
     # init environment
     env = Environment(**vars(args.env))
 
-    RL = DDPG()
-    #RL = SAC()
+    #RL = DDPG()
+    RL = SAC()
 
     # run episodes
     for e in tqdm(range(args.episodes)):

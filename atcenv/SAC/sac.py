@@ -7,10 +7,7 @@ from atcenv.SAC.buffer import ReplayBuffer
 from atcenv.SAC.networks import ActorNetwork, CriticNetwork, ValueNetwork
 
 class SAC:
-    # def __init__(self, alpha=0.0003, beta=0.0003, input_dims=[8],
-    #         actionbounds = 1, gamma=0.99, n_actions=2, max_size=1000000, tau=0.005,
-    #         layer1_size=2048, layer2_size=2048, batch_size=256, reward_scale=10):
-    def __init__(self, alpha=0.00006, beta=0.00006, input_dims=[8],
+    def __init__(self, alpha=0.00006, beta=0.00006, input_dims=[15],
             actionbounds = 1, gamma=0.99, n_actions=2, max_size=1000000, tau=0.005,
             layer1_size=256, layer2_size=256, batch_size=256, reward_scale=20):
         self.gamma = gamma
@@ -19,7 +16,7 @@ class SAC:
         self.batch_size = batch_size
         self.n_actions = n_actions
 
-        self.actor = ActorNetwork(n_actions=n_actions, name='actor', ax_action=actionbounds)
+        self.actor = ActorNetwork(n_actions=n_actions, name='actor', max_action=actionbounds)
         self.critic_1 = CriticNetwork(n_actions=n_actions, name='critic_1')
         self.critic_2 = CriticNetwork(n_actions=n_actions, name='critic_2')
         self.value = ValueNetwork(name='value')
@@ -40,7 +37,7 @@ class SAC:
 
         return actions[0]
 
-    def setResult(self, state, action, reward, new_state, done):
+    def setResult(self,episode_name, state, new_state, reward, action, done):
         self.memory.store_transition(state, action, reward, new_state, done)
 
     def update_network_parameters(self, tau=None):

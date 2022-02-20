@@ -17,7 +17,7 @@ BLACK = [0, 0, 0]
 RED = [255, 0, 0]
 
 NUMBER_INTRUDERS_STATE = 5
-MAX_DISTANCE = 100*u.nm
+MAX_DISTANCE = 250*u.nm
 MAX_BEARING = 2*math.pi
 
 class Environment(gym.Env):
@@ -96,18 +96,34 @@ class Environment(gym.Env):
         Returns the reward assigned to each agent
         :return: reward assigned to each agent
         """
-        weight_a    = 1.
-        weight_b    = 1.
-        weight_c    = 1.
-        weight_d    = 1.
+        weight_a    = -1
+        weight_b    = -1/10.
+        weight_c    = -1/10.
+        weight_d    = -1/10.
+        weight_e    = + 1  
         
         conflicts   = self.conflict_penalties() * weight_a
         drifts      = self.drift_penalties() * weight_b
         severities  = self.conflict_severity() * weight_c 
         speed_dif   = self.speedDifference() * weight_d 
+        target      = self.reachedTarget() * weight_e 
         
-        tot_reward  = conflicts + drifts + severities + speed_dif
+        tot_reward  = conflicts + drifts + severities + speed_dif + target
         return tot_reward
+
+    def reachedTarget(self):
+        """
+        Returns a list with aircraft that just reached the target
+        :return: boolean list for conflicts
+        """        
+        target = np.zeros(self.num_flights)
+        for i, f in enumerate(self.flights):
+            if i not in self.done:
+                distance = f.position.distance(f.target)
+                if distance < self.tol:
+                    target[i] = 1
+                    
+        return target
 
     def speedDifference(self):
         """
@@ -132,7 +148,7 @@ class Environment(gym.Env):
         for i in range(self.num_flights - 1):
             if i not in self.done:
                 if i in self.conflicts:
-                    conflicts[i] = 1
+                    conflicts[i] += 1
                     
         return conflicts
     

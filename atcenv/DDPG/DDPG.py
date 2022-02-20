@@ -5,6 +5,8 @@ from atcenv.DDPG.ReplayBuffer import ReplayBuffer
 import atcenv.DDPG.TempConfig as tc
 import tensorflow as tf
 import numpy as np
+import atcenv.units as u
+import math
 
 
 BUFFER_SIZE = 1000000
@@ -19,9 +21,9 @@ GAMMA = 0.99
 ACTION_DIM = 2
 STATE_DIM = 15
 
-
-# NORMALIZATION_FACTOR = 150  # value achieved by tuning
-
+NUMBER_INTRUDERS_STATE = 5
+MAX_DISTANCE = 250*u.nm
+MAX_BEARING = 2*math.pi
 
 class DDPG(object):
 
@@ -47,13 +49,28 @@ class DDPG(object):
         # exploration noise
         self.noise1 = OrnsteinUhlenbeckActionNoise(ACTION_DIM)
 
-    def normalizeState(self, s_t):
-        #TODO
+    def normalizeState(self, s_t, max_speed, min_speed):
+         # distance to closest #NUMBER_INTRUDERS_STATE intruders
+        for i in range(0, NUMBER_INTRUDERS_STATE):
+            s_t[i] = s_t[i]/MAX_DISTANCE
+
+        # relative bearing to closest #NUMBER_INTRUDERS_STATE intruders
+        for i in range(NUMBER_INTRUDERS_STATE, NUMBER_INTRUDERS_STATE*2):
+            s_t[i] = s_t[i]/MAX_BEARING
+
+        # current speed
+        s_t[NUMBER_INTRUDERS_STATE*2 + 1] = (s_t[NUMBER_INTRUDERS_STATE*2 + 1]-min_speed)/(max_speed-min_speed)
+        # optimal speed
+        s_t[NUMBER_INTRUDERS_STATE*2 + 2] = (s_t[NUMBER_INTRUDERS_STATE*2 + 2]-min_speed)/(max_speed-min_speed)
+        # distance to target
+        s_t[NUMBER_INTRUDERS_STATE*2 + 3] = s_t[NUMBER_INTRUDERS_STATE*2 + 3]/MAX_DISTANCE
+        # bearing to target
+        s_t[NUMBER_INTRUDERS_STATE*2 + 4] = s_t[NUMBER_INTRUDERS_STATE*2 + 4]/MAX_BEARING
 
         return s_t
 
-    def do_step(self, s_t, scenname):
-        s_t = self.normalizeState(np.asarray(s_t))
+    def do_step(self, s_t, scenname, max_speed, min_speed):
+        s_t = self.normalizeState(np.asarray(s_t), max_speed, min_speed)
 
         if s_t.shape[0] > self.state_dim:
             a_t_original = self.actor.model.predict(s_t)
@@ -62,7 +79,7 @@ class DDPG(object):
 
         actions = a_t_original[0]
         #actions += self.noise1.sample()
-        actions = np.clip(actions, 0, 1)
+        #actions = np.clip(actions, 0, 1)
 
         return actions
 
@@ -101,7 +118,7 @@ class DDPG(object):
             self.actor.target_train()
             self.critic.target_train()
 
-    def setResult(self, scenname, state, nextstate, rewards, actions, done):
+    def setResult(self, scenname, state, nextstate, rewards, actions, done, max_speed, min_speed):
 
         if self.actions.get(scenname) is None:
             self.actions[scenname] = np.array([])
@@ -111,20 +128,17 @@ class DDPG(object):
         self.reward_per_action[scenname] = np.append(self.reward_per_action[scenname], rewards)
         self.actions[scenname] = np.append(self.actions[scenname], actions)
 
-        state = self.normalizeState(np.asarray(state))
-        nextstate = self.normalizeState(np.asarray(nextstate))
+        state = self.normalizeState(np.asarray(state), max_speed, min_speed)
+        nextstate = self.normalizeState(np.asarray(nextstate), max_speed, min_speed)
+        rewards = rewards/10
 
         self.buff.add(state, actions, rewards, nextstate, done)  # Add replay buffer
         self.batch_update()
 
-        if done:
-            self.episode_end()
-
     def episode_end(self, scenarioName):
         print('episode end', scenarioName)
 
-        repetition = scenarioName.split('Rep')[1]
-        repetition = int(repetition.split('.')[0])
+        repetition = int(scenarioName.split('EPISODE_')[1])
         if repetition % 5 == 0:
             tc.save_DDQL('results', "DDPG_critic_" + scenarioName + ".h5", self.critic)
             tc.save_DDQL('results', "DDPG_actor_" + scenarioName + ".h5", self.actor)

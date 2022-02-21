@@ -83,7 +83,8 @@ class Environment(gym.Env):
         for i, f in enumerate(self.flights):
             if i not in self.done:
                 # heading, speed
-                f.track += action[i][0] * MAX_BEARING/2
+                new_track = f.track + action[i][0] * MAX_BEARING/2
+                f.track = (new_track + u.circle) % u.circle
                 f.airspeed = (action[i][1]) * (self.max_speed - self.min_speed) + self.min_speed
 
         # RDC: here you should implement your resolution actions

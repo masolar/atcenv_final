@@ -132,7 +132,9 @@ class DDPG(object):
 
         state = self.normalizeState(np.asarray(state), max_speed, min_speed)
         nextstate = self.normalizeState(np.asarray(nextstate), max_speed, min_speed)
-        rewards = rewards/10
+        rewards = rewards/100
+
+        #print(state, actions,rewards)
 
         self.buff.add(state, actions, rewards, nextstate, done)  # Add replay buffer
         self.batch_update()

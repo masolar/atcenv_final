@@ -136,6 +136,9 @@ class DDPG(object):
 
         self.buff.add(state, actions, rewards, nextstate, done)  # Add replay buffer
         self.batch_update()
+        
+    def update(self):
+        self.batch_update()
 
     def episode_end(self, scenarioName):
         print('episode end', scenarioName)

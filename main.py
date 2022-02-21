@@ -37,12 +37,16 @@ if __name__ == "__main__":
     RL = DDPG()
     #RL = SAC()
 
+    # increase number of flights
+
     # run episodes
     for e in tqdm(range(args.episodes)):        
         episode_name = "EPISODE_" + str(e) 
 
         # reset environment
-        obs = env.reset()
+        # train with an increasing number of aircraft
+        number_of_aircraft = min(int(e/100)+1,10)
+        obs = env.reset(number_of_aircraft)
 
         # set done status to false
         done = False
@@ -68,16 +72,18 @@ if __name__ == "__main__":
             for it_obs in range(len(obs)):
                 RL.setResult(episode_name, obs0[it_obs], obs[it_obs], rew[it_obs], actions[it_obs], done, env.max_speed, env.min_speed)
 
-            env.render()
+            # comment render out for faster processing
+            #env.render()
             number_steps_until_done += 1
             number_conflicts += sum(env.conflicts)
             #time.sleep(0.05)
 
         # save information
+        #RL.update() # train the model
         RL.episode_end(episode_name)
         tc.dump_pickle(number_steps_until_done, 'results/save/numbersteps_' + episode_name)
         tc.dump_pickle(number_conflicts, 'results/save/numberconflicts_' + episode_name)
-        print(episode_name,'ended in', number_steps_until_done, 'runs, with', number_conflicts, 'conflicts')        
+        print(episode_name,'ended in', number_steps_until_done, 'runs, with', number_conflicts, 'conflicts, number of aircraft=', number_of_aircraft)        
 
         # close rendering
         env.close()

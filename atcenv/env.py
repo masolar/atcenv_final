@@ -83,7 +83,7 @@ class Environment(gym.Env):
         for i, f in enumerate(self.flights):
             if i not in self.done:
                 # heading, speed
-                f.track = action[i][0] * MAX_BEARING
+                f.track += action[i][0] * MAX_BEARING/2
                 f.airspeed = (action[i][1]) * (self.max_speed - self.min_speed) + self.min_speed
 
         # RDC: here you should implement your resolution actions
@@ -106,7 +106,7 @@ class Environment(gym.Env):
         drifts      = self.drift_penalties() * weight_b
         severities  = self.conflict_severity() * weight_c 
         speed_dif   = self.speedDifference() * weight_d 
-        target      = self.reachedTarget() * weight_e 
+        target      = self.reachedTarget() * weight_e # can also try to just ouput negative rewards
         
         tot_reward  = conflicts + drifts + severities + speed_dif + target  
 
@@ -225,8 +225,16 @@ class Environment(gym.Env):
                 # distance to closest #NUMBER_INTRUDERS_STATE
                 observations += np.take(distance_all[i], closest_intruders).tolist()
 
+                # during training the number of flights may be lower than #NUMBER_INTRUDERS_STATE
+                while len(observations) < NUMBER_INTRUDERS_STATE:
+                    observations.append(0)
+
                 # relative bearing #NUMBER_INTRUDERS_STATE
                 observations += np.take(bearing_all[i], closest_intruders).tolist()
+
+                # during training the number of flights may be lower than #NUMBER_INTRUDERS_STATE
+                while len(observations) < 2*NUMBER_INTRUDERS_STATE:
+                    observations.append(0)
 
                 # current bearing
                 observations.append(f.bearing)
@@ -330,13 +338,16 @@ class Environment(gym.Env):
 
         return obs, rew, done, {}
 
-    def reset(self) -> List:
+    def reset(self, number_flights_training) -> List:
         """
         Resets the environment and returns initial observation
         :return: initial observation
         """
         # create random airspace
         self.airspace = Airspace.random(self.min_area, self.max_area)
+
+        # during training, the number of flights will increase from  1 to 10
+        self.num_flights = number_flights_training
 
         # create random flights
         self.flights = []

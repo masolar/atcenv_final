@@ -1,8 +1,10 @@
 import tensorflow as tf
 import numpy as np
 
-HIDDEN1_UNITS_ = 120
-HIDDEN2_UNITS_ = 140
+# HIDDEN1_UNITS_ = 120
+# HIDDEN2_UNITS_ = 140
+HIDDEN1_UNITS_ = 60
+HIDDEN2_UNITS_ = 70
 
 # the actor is the policy function. the actor produces an action given the current
 # state of the environment.

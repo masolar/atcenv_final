@@ -9,7 +9,7 @@ import atcenv.units as u
 import math
 
 
-BUFFER_SIZE = 1000000
+BUFFER_SIZE = 100000
 BATCH_SIZE = 256
 TAU = 0.001  # Target Network HyperParameters, for soft update of target parameters
 LRA = 0.0001  # Learning rate for Actor
@@ -58,6 +58,8 @@ class DDPG(object):
         for i in range(NUMBER_INTRUDERS_STATE, NUMBER_INTRUDERS_STATE*2):
             s_t[i] = s_t[i]/MAX_BEARING
 
+        # current bearing
+        s_t[NUMBER_INTRUDERS_STATE*2] = s_t[NUMBER_INTRUDERS_STATE*2]/MAX_BEARING
         # current speed
         s_t[NUMBER_INTRUDERS_STATE*2 + 1] = (s_t[NUMBER_INTRUDERS_STATE*2 + 1]-min_speed)/(max_speed-min_speed)
         # optimal speed
@@ -139,7 +141,7 @@ class DDPG(object):
         print('episode end', scenarioName)
 
         repetition = int(scenarioName.split('EPISODE_')[1])
-        if repetition % 5 == 0:
+        if repetition % 1000 == 0:
             tc.save_DDQL('results', "DDPG_critic_" + scenarioName + ".h5", self.critic)
             tc.save_DDQL('results', "DDPG_actor_" + scenarioName + ".h5", self.actor)
             tc.dump_pickle(self.L, 'results/save/loss_' + scenarioName)

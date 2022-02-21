@@ -97,9 +97,9 @@ class Environment(gym.Env):
         :return: reward assigned to each agent
         """
         weight_a    = -1
-        weight_b    = -1/10.
-        weight_c    = -1/10.
-        weight_d    = -1/10.
+        weight_b    = -1/5.
+        weight_c    = -1/5.
+        weight_d    = -1/5.
         weight_e    = + 1  
         
         conflicts   = self.conflict_penalties() * weight_a
@@ -108,13 +108,14 @@ class Environment(gym.Env):
         speed_dif   = self.speedDifference() * weight_d 
         target      = self.reachedTarget() * weight_e 
         
-        tot_reward  = conflicts + drifts + severities + speed_dif + target
+        tot_reward  = conflicts + drifts + severities + speed_dif + target  
+
         return tot_reward
 
     def reachedTarget(self):
         """
         Returns a list with aircraft that just reached the target
-        :return: boolean list for conflicts
+        :return: boolean list - 1 if aircraft have reached the target
         """        
         target = np.zeros(self.num_flights)
         for i, f in enumerate(self.flights):
@@ -163,7 +164,7 @@ class Environment(gym.Env):
         drift = np.zeros(self.num_flights)
         for i, f in enumerate(self.flights):
             if i not in self.done:
-                drift[i] = f.drift
+                drift[i] = abs(f.drift)
         
         return drift
             

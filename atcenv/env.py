@@ -146,7 +146,7 @@ class Environment(gym.Env):
         """
         
         conflicts = np.zeros(self.num_flights)
-        for i in range(self.num_flights - 1):
+        for i in range(self.num_flights):
             if i not in self.done:
                 if i in self.conflicts:
                     conflicts[i] += 1
@@ -188,10 +188,9 @@ class Environment(gym.Env):
         Returns the observation of each agent
         :return: observation of each agent
         """
-        # observations (size = 2 * NUMBER_INTRUDERS_STATE + 5):
+        # observations (size = 2 * NUMBER_INTRUDERS_STATE + 4):
         # distance to closest #NUMBER_INTRUDERS_STATE intruders
         # relative bearing to closest #NUMBER_INTRUDERS_STATE intruders
-        # current bearing
         # current speed
         # optimal airspeed
         # distance to target
@@ -236,9 +235,6 @@ class Environment(gym.Env):
                 while len(observations) < 2*NUMBER_INTRUDERS_STATE:
                     observations.append(0)
 
-                # current bearing
-                observations.append(f.bearing)
-
                 # current speed
                 observations.append(f.airspeed)
 
@@ -249,7 +245,7 @@ class Environment(gym.Env):
                 observations.append(f.position.distance(f.target))
 
                 # bearing to target
-                observations.append(f.track)
+                observations.append(float(f.drift))
 
                 observations_all.append(observations)
         # RDC: here you should implement your observation function

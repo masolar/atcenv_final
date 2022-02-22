@@ -77,15 +77,14 @@ class Environment(gym.Env):
         :return:
         """
 
-        if len(action)!=len(self.flights):
-            return None
-
+        it2 = 0
         for i, f in enumerate(self.flights):
             if i not in self.done:
                 # heading, speed
-                new_track = f.track + action[i][0] * MAX_BEARING/2
+                new_track = f.track + action[it2][0] * MAX_BEARING/8
                 f.track = (new_track + u.circle) % u.circle
-                f.airspeed = (action[i][1]) * (self.max_speed - self.min_speed) + self.min_speed
+                f.airspeed = (action[it2][1]) * (self.max_speed - self.min_speed) + self.min_speed
+                it2 +=1
 
         # RDC: here you should implement your resolution actions
         ##########################################################
@@ -211,7 +210,7 @@ class Environment(gym.Env):
                         # avoid a future conflict
                         distance_all[i][j] = self.flights[i].prediction.distance(self.flights[j].prediction)
 
-                        # bearing
+                        # relative bearing
                         dx = self.flights[i].prediction.x - self.flights[j].prediction.x
                         dy = self.flights[i].prediction.y - self.flights[j].prediction.y
                         compass = math.atan2(dx, dy)

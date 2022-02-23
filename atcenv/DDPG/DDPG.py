@@ -58,16 +58,14 @@ class DDPG(object):
         for i in range(NUMBER_INTRUDERS_STATE, NUMBER_INTRUDERS_STATE*2):
             s_t[i] = s_t[i]/MAX_BEARING
 
-        # current bearing
-        s_t[NUMBER_INTRUDERS_STATE*2] = s_t[NUMBER_INTRUDERS_STATE*2]/MAX_BEARING
         # current speed
-        s_t[NUMBER_INTRUDERS_STATE*2 + 1] = (s_t[NUMBER_INTRUDERS_STATE*2 + 1]-min_speed)/(max_speed-min_speed)
+        s_t[NUMBER_INTRUDERS_STATE*2 ] = (s_t[NUMBER_INTRUDERS_STATE*2]-min_speed)/(max_speed-min_speed)
         # optimal speed
-        s_t[NUMBER_INTRUDERS_STATE*2 + 2] = (s_t[NUMBER_INTRUDERS_STATE*2 + 2]-min_speed)/(max_speed-min_speed)
+        s_t[NUMBER_INTRUDERS_STATE*2 + 1] = (s_t[NUMBER_INTRUDERS_STATE*2 + 1]-min_speed)/(max_speed-min_speed)
         # distance to target
-        s_t[NUMBER_INTRUDERS_STATE*2 + 3] = s_t[NUMBER_INTRUDERS_STATE*2 + 3]/MAX_DISTANCE
+        s_t[NUMBER_INTRUDERS_STATE*2 + 2] = s_t[NUMBER_INTRUDERS_STATE*2 + 2]/MAX_DISTANCE
         # bearing to target
-        s_t[NUMBER_INTRUDERS_STATE*2 + 4] = s_t[NUMBER_INTRUDERS_STATE*2 + 4]/MAX_BEARING
+        s_t[NUMBER_INTRUDERS_STATE*2 + 3] = s_t[NUMBER_INTRUDERS_STATE*2 + 3]/MAX_BEARING
 
         return s_t
 
@@ -146,7 +144,7 @@ class DDPG(object):
         print('episode end', scenarioName)
 
         repetition = int(scenarioName.split('EPISODE_')[1])
-        if repetition % 1000 == 0:
+        if repetition % 500 == 0:
             tc.save_DDQL('results', "DDPG_critic_" + scenarioName + ".h5", self.critic)
             tc.save_DDQL('results', "DDPG_actor_" + scenarioName + ".h5", self.actor)
             tc.dump_pickle(self.L, 'results/save/loss_' + scenarioName)
@@ -154,5 +152,6 @@ class DDPG(object):
         if scenarioName not in self.reward_per_action:
             return
 
+        #print(scenarioName, 'min reward', min(self.reward_per_action[scenarioName]), 'max reward', max(self.reward_per_action[scenarioName]))
         tc.dump_pickle(self.reward_per_action[scenarioName], 'results/save/reward_' + scenarioName)
         tc.dump_pickle(self.actions[scenarioName], 'results/save/actions_' + scenarioName)

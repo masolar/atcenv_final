@@ -110,23 +110,16 @@ class Flight:
         :return:
         """
         drift = self.bearing - self.track
+        drift = abs(drift)
 
-        if drift > math.pi:
-            return -(u.circle - drift)
-        elif drift < -math.pi:
-            return (u.circle + drift)
-        else:
+        if drift == math.pi:
             return drift
-        # drift = abs(drift)
-
-        # if drift == math.pi:
-        #     return drift
-        # elif drift < math.pi:
-        #     return drift
-        # elif self.bearing > self.track:
-        #     return drift - u.circle
-        # else:
-        #     return u.circle - drift
+        elif drift < math.pi:
+            return drift
+        elif self.bearing > self.track:
+            return drift - u.circle
+        else:
+            return u.circle - drift
 
     @classmethod
     def random(cls, airspace: Airspace, min_speed: float, max_speed: float, tol: float = 0.):

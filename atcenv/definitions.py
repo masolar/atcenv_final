@@ -50,6 +50,7 @@ class Flight:
     Flight class
     """
     position: Point
+    real_position: Point
     target: Point
     optimal_airspeed: float
 

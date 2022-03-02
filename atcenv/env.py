@@ -6,6 +6,7 @@ from typing import Dict, List
 from atcenv.definitions import *
 from gym.envs.classic_control import rendering
 from shapely.geometry import LineString
+from uncertainties import position_scramble
 
 # our own packages
 import numpy as np

@@ -17,7 +17,6 @@ if __name__ == "__main__":
     import atcenv.DDPG.TempConfig as tc
     from atcenv.SAC.sac import SAC
     import copy
-    import numpy as np
 
     parser = ArgumentParser(
         prog='Conflict resolution environment',
@@ -39,8 +38,6 @@ if __name__ == "__main__":
     #RL = SAC()
 
     # increase number of flights
-    rew_list = []
-    state_list = []
 
     # run episodes
     for e in tqdm(range(args.episodes)):        
@@ -64,27 +61,22 @@ if __name__ == "__main__":
             # get actions from RL model
             actions = []
             for obs_i in obs:
-                #actions.append(RL.do_step(obs_i, episode_name, env.max_speed, env.min_speed))
-                actions.append([0,0])
+                actions.append(RL.do_step(obs_i, episode_name, env.max_speed, env.min_speed))
 
             obs0 = copy.deepcopy(obs)
 
             # perform step with dummy action
             obs, rew, done, info = env.step(actions)
-            for rew_i in rew:
-                rew_list.append(rew_i)
-            for obs_i in obs:
-                state_list.append(obs_i)
-            
+
             # train the RL model
             for it_obs in range(len(obs)):
                 RL.setResult(episode_name, obs0[it_obs], obs[it_obs], rew[it_obs], actions[it_obs], done, env.max_speed, env.min_speed)
 
             # comment render out for faster processing
-            env.render()
+            #env.render()
             number_steps_until_done += 1
             number_conflicts += sum(env.conflicts)
-            time.sleep(0.05)
+            #time.sleep(0.05)
 
         # save information
         #RL.update() # train the model
@@ -92,7 +84,6 @@ if __name__ == "__main__":
         tc.dump_pickle(number_steps_until_done, 'results/save/numbersteps_' + episode_name)
         tc.dump_pickle(number_conflicts, 'results/save/numberconflicts_' + episode_name)
         print(episode_name,'ended in', number_steps_until_done, 'runs, with', number_conflicts, 'conflicts, number of aircraft=', number_of_aircraft)        
-        np.savetxt('rewards.csv', rew_list)
-        np.savetxt('states.csv', state_list)
+
         # close rendering
         env.close()

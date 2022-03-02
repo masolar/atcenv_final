@@ -19,7 +19,7 @@ RED = [255, 0, 0]
 
 # Position uncertainty vars
 ENABLE_POSITION_UNCERTAINTY = True
-PROB_POSITION_UNCERTAINTY = 0.5
+PROB_POSITION_UNCERTAINTY = 1
 MAG_POSITION_UNCERTAINTY = 1000 # m
 
 # Wind gust vars
@@ -302,14 +302,17 @@ class Environment(gym.Env):
                 dx, dy = f.components
 
                 # get current position
-                position = f.real_position
+                position = f.position
 
                 # get new position and advance one time step
-                f.real_position._set_coords(position.x + dx * self.dt, position.y + dy * self.dt)
+                f.position._set_coords(position.x + dx * self.dt, position.y + dy * self.dt)
                 
                 # Scramble the position
-                f.position = position_scramble(f.real_position, PROB_POSITION_UNCERTAINTY, 
-                                               0, MAG_POSITION_UNCERTAINTY)
+                if ENABLE_POSITION_UNCERTAINTY:
+                    f.reported_position = position_scramble(f.position, PROB_POSITION_UNCERTAINTY, 
+                                                0, MAG_POSITION_UNCERTAINTY)
+                else:
+                    f.reported_position = f.position
 
     def step(self, action: List) -> Tuple[List, List, bool, Dict]:
         """
@@ -426,13 +429,13 @@ class Environment(gym.Env):
             circle = rendering.make_circle(radius=self.min_distance / 2.0,
                                            res=10,
                                            filled=False)
-            circle.add_attr(rendering.Transform(translation=(f.position.x,
-                                                             f.position.y)))
+            circle.add_attr(rendering.Transform(translation=(f.reported_position.x,
+                                                             f.reported_position.y)))
             circle.set_color(*BLUE)
 
-            plan = LineString([f.position, f.target])
+            plan = LineString([f.reported_position, f.target])
             self.viewer.draw_polyline(plan.coords, linewidth=1, color=color)
-            prediction = LineString([f.position, f.prediction])
+            prediction = LineString([f.reported_position, f.prediction])
             self.viewer.draw_polyline(prediction.coords, linewidth=4, color=color)
 
             self.viewer.add_onetime(circle)

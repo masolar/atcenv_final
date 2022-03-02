@@ -63,7 +63,7 @@ class Flight:
         """
         self.track = self.bearing
         self.airspeed = self.optimal_airspeed
-        self.real_position = self.position
+        self.reported_position = self.position
 
     @property
     def bearing(self) -> float:
@@ -71,8 +71,8 @@ class Flight:
         Bearing from current position to target
         :return:
         """
-        dx = self.target.x - self.position.x
-        dy = self.target.y - self.position.y
+        dx = self.target.x - self.reported_position.x
+        dy = self.target.y - self.reported_position.y
         compass = math.atan2(dx, dy)
         return (compass + u.circle) % u.circle
 
@@ -84,7 +84,7 @@ class Flight:
         :return:
         """
         dx, dy = self.components
-        return Point([self.position.x + dx * dt, self.position.y + dy * dt])
+        return Point([self.reported_position.x + dx * dt, self.reported_position.y + dy * dt])
 
     @property
     def components(self) -> Tuple:
@@ -102,7 +102,7 @@ class Flight:
         Current distance to the target (in meters)
         :return: distance to the target
         """
-        return self.position.distance(self.target)
+        return self.reported_position.distance(self.target)
 
     @property
     def drift(self) -> float:

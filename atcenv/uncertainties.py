@@ -31,4 +31,4 @@ def position_scramble(ac_point, probability, min_dist, max_dist, alt = 0):
         new_y = ac_point.y + random_mag * np.sin(np.deg2rad(random_dir))
         
         return Point(new_x, new_y)
-    
+

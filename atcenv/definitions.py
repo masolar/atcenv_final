@@ -50,7 +50,6 @@ class Flight:
     Flight class
     """
     position: Point
-    real_position: Point
     target: Point
     optimal_airspeed: float
 
@@ -64,6 +63,7 @@ class Flight:
         """
         self.track = self.bearing
         self.airspeed = self.optimal_airspeed
+        self.real_position = self.position
 
     @property
     def bearing(self) -> float:

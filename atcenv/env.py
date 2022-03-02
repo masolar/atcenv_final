@@ -6,7 +6,7 @@ from typing import Dict, List
 from atcenv.definitions import *
 from gym.envs.classic_control import rendering
 from shapely.geometry import LineString
-from uncertainties import position_scramble
+from .uncertainties import position_scramble
 
 # our own packages
 import numpy as np
@@ -16,6 +16,14 @@ GREEN = [0, 255, 0]
 BLUE = [0, 0, 255]
 BLACK = [0, 0, 0]
 RED = [255, 0, 0]
+
+# Position uncertainty vars
+ENABLE_POSITION_UNCERTAINTY = True
+PROB_POSITION_UNCERTAINTY = 0.5
+MAG_POSITION_UNCERTAINTY = 1000 # m
+
+# Wind gust vars
+ENABLE_WIND_GUSTS = True
 
 NUMBER_INTRUDERS_STATE = 5
 MAX_DISTANCE = 250*u.nm
@@ -294,10 +302,14 @@ class Environment(gym.Env):
                 dx, dy = f.components
 
                 # get current position
-                position = f.position
+                position = f.real_position
 
                 # get new position and advance one time step
-                f.position._set_coords(position.x + dx * self.dt, position.y + dy * self.dt)
+                f.real_position._set_coords(position.x + dx * self.dt, position.y + dy * self.dt)
+                
+                # Scramble the position
+                f.position = position_scramble(f.real_position, PROB_POSITION_UNCERTAINTY, 
+                                               0, MAG_POSITION_UNCERTAINTY)
 
     def step(self, action: List) -> Tuple[List, List, bool, Dict]:
         """

@@ -32,3 +32,12 @@ def position_scramble(ac_point, probability, min_dist, max_dist, alt = 0):
         
         return Point(new_x, new_y)
 
+def apply_wind(flight, intensity, track):
+    '''Apply the current wind to aircraft.'''
+    wind_dx = intensity * np.sin(np.deg2rad(track))
+    wind_dy = intensity * np.cos(np.deg2rad(track))
+    
+    # Get the components of the aircraft
+    dx, dy = flight.components
+    
+    return dx + wind_dx, dy + wind_dy

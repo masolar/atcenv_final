@@ -6,7 +6,10 @@ Main file.
 
 if __name__ == "__main__":
     import random
-    random.seed(42)
+    import numpy as np
+    seed = 42
+    random.seed(seed)
+    np.random.seed(seed)
     from jsonargparse import ArgumentParser, ActionConfigFile
     from atcenv import Environment
     import time

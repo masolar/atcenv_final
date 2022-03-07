@@ -6,7 +6,7 @@ from typing import Dict, List
 from atcenv.definitions import *
 from gym.envs.classic_control import rendering
 from shapely.geometry import LineString
-from .uncertainties import position_scramble
+from .uncertainties import position_scramble, apply_wind
 
 # our own packages
 import numpy as np
@@ -22,8 +22,11 @@ ENABLE_POSITION_UNCERTAINTY = True
 PROB_POSITION_UNCERTAINTY = 1
 MAG_POSITION_UNCERTAINTY = 1000 # m
 
-# Wind gust vars
-ENABLE_WIND_GUSTS = True
+# Wind
+ENABLE_WIND = True
+MINIMUM_WIND_SPEED = 0 # m/s
+MAXIMUM_WIND_SPEED = 30 # m/s
+
 
 NUMBER_INTRUDERS_STATE = 5
 MAX_DISTANCE = 250*u.nm
@@ -76,6 +79,10 @@ class Environment(gym.Env):
         self.conflicts = set()  # set of flights that are in conflict
         self.done = set()  # set of flights that reached the target
         self.i = None
+        
+        # Get the random wind direction and intensity for this episode
+        self.wind_magnitude = random.randint(MINIMUM_WIND_SPEED, MAXIMUM_WIND_SPEED)
+        self.wind_direction = random.randint(0, 359)
 
     def resolution(self, action: List) -> None:
         """
@@ -299,7 +306,10 @@ class Environment(gym.Env):
         for i, f in enumerate(self.flights):
             if i not in self.done:
                 # get current speed components
-                dx, dy = f.components
+                if ENABLE_WIND:
+                    dx, dy = apply_wind(f, self.wind_magnitude, self.wind_direction)
+                else:
+                    dx, dy = f.components
 
                 # get current position
                 position = f.position

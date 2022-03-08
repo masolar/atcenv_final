@@ -27,6 +27,12 @@ ENABLE_WIND = True
 MINIMUM_WIND_SPEED = 0 # m/s
 MAXIMUM_WIND_SPEED = 30 # m/s
 
+# Action delay
+ENABLE_ACTION_DELAY = True
+MINIMUM_DELAY = 0 #s
+MAXIMUM_DELAY = 3 #s
+DELAY_PROBABILITY = 0.1
+
 
 NUMBER_INTRUDERS_STATE = 5
 MAX_DISTANCE = 250*u.nm
@@ -96,10 +102,54 @@ class Environment(gym.Env):
         it2 = 0
         for i, f in enumerate(self.flights):
             if i not in self.done:
-                # heading, speed
-                new_track = f.track + action[it2][0] * MAX_BEARING/8
-                f.track = (new_track + u.circle) % u.circle
-                f.airspeed = (action[it2][1]) * (self.max_speed - self.min_speed) + self.min_speed
+                # roll dice
+                delay_roll = random.random()
+                # Is delay enabled?
+                if not ENABLE_ACTION_DELAY:
+                    # Apply action
+                    new_track = f.track + action[it2][0] * MAX_BEARING/8
+                    f.track = (new_track + u.circle) % u.circle
+                    f.airspeed = (action[it2][1]) * (self.max_speed - self.min_speed) + self.min_speed
+                    
+                # Do we apply the action now? Or do we delay? 
+                elif f.action_delay == -999 and delay_roll>DELAY_PROBABILITY:
+                    # Set the action now
+                    # heading, speed
+                    new_track = f.track + action[it2][0] * MAX_BEARING/8
+                    f.track = (new_track + u.circle) % u.circle
+                    f.airspeed = (action[it2][1]) * (self.max_speed - self.min_speed) + self.min_speed
+                
+                # Have we reached delay 0 (or close to smaller than 0)?
+                elif f.action_delay <= 0 and f.action_delay != -999:
+                    # Delay = -999 means that there wasn't a delay to begin with
+                    # We have reached delay 0, apply the original action
+                    new_track = f.track + f.delayed_action[0] * MAX_BEARING/8
+                    f.track = (new_track + u.circle) % u.circle
+                    f.airspeed = (f.delayed_action[1]) * (self.max_speed - self.min_speed) + self.min_speed
+                    # Reset delay and stored action
+                    f.action_delay = -999
+                    f.delayed_action = None
+                
+                # Do we delay this action?
+                elif f.action_delay == -999 and delay_roll < DELAY_PROBABILITY:
+                    # Let's get a delay
+                    f.action_delay = random.uniform(MINIMUM_DELAY, MAXIMUM_DELAY)
+                    # Store the delayed action
+                    f.delayed_action = action[it2]
+                    
+                elif f.action_delay > 0:
+                    # There is a delay in progress for this flight, decrease delay by sim step
+                    f.action_delay = f.action_delay - self.dt
+                    
+                else:
+                    # Something went wrong, apply action and reset everything
+                    print('Something went wrong in resolution delay.')
+                    new_track = f.track + action[it2][0] * MAX_BEARING/8
+                    f.track = (new_track + u.circle) % u.circle
+                    f.airspeed = (action[it2][1]) * (self.max_speed - self.min_speed) + self.min_speed
+                    f.action_delay = -999
+                    f.delayed_action = None
+                
                 it2 +=1
 
         # RDC: here you should implement your resolution actions

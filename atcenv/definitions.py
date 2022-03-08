@@ -55,6 +55,8 @@ class Flight:
 
     airspeed: float = field(init=False)
     track: float = field(init=False)
+    
+    reported_position: Point = None
 
     def __post_init__(self) -> None:
         """
@@ -63,7 +65,11 @@ class Flight:
         """
         self.track = self.bearing
         self.airspeed = self.optimal_airspeed
+        # The reported position, not the actual one
         self.reported_position = self.position
+        # The action delay still left before 
+        self.action_delay = -999
+        self.delayed_action = None
 
     @property
     def bearing(self) -> float:
@@ -71,8 +77,12 @@ class Flight:
         Bearing from current position to target
         :return:
         """
-        dx = self.target.x - self.reported_position.x
-        dy = self.target.y - self.reported_position.y
+        if self.reported_position is not None:
+            dx = self.target.x - self.reported_position.x
+            dy = self.target.y - self.reported_position.y
+        else:
+            dx = self.target.x - self.position.x
+            dy = self.target.y - self.position.y
         compass = math.atan2(dx, dy)
         return (compass + u.circle) % u.circle
 

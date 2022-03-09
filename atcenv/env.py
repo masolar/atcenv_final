@@ -3,6 +3,7 @@ Environment module
 """
 import gym
 from typing import Dict, List
+import atcenv
 from atcenv.definitions import *
 from gym.envs.classic_control import rendering
 from shapely.geometry import LineString
@@ -20,6 +21,9 @@ NUMBER_INTRUDERS_STATE = 5
 MAX_DISTANCE = 250*u.nm
 MAX_BEARING = 2*math.pi
 
+STATE_SIZE = 14
+ACTION_SIZE = 2
+
 class Environment(gym.Env):
     metadata = {'render.modes': ['rgb_array']}
 
@@ -30,7 +34,7 @@ class Environment(gym.Env):
                  min_area: Optional[float] = 125. * 125.,
                  max_speed: Optional[float] = 500.,
                  min_speed: Optional[float] = 400,
-                 max_episode_len: Optional[int] = 300,
+                 max_episode_len: Optional[int] = 500,
                  min_distance: Optional[float] = 5.,
                  distance_init_buffer: Optional[float] = 5.,
                  **kwargs):
@@ -68,7 +72,7 @@ class Environment(gym.Env):
         self.done = set()  # set of flights that reached the target
         self.i = None
 
-    def resolution(self, action: List) -> None:
+    def resolution(self, action: List, isMARL) -> None:
         """
         Applies the resolution actions
         If your policy can modify the speed, then remember to clip the speed of each flight
@@ -77,21 +81,24 @@ class Environment(gym.Env):
         :return:
         """
 
-        it2 = 0
+        it2 = 0      
         for i, f in enumerate(self.flights):
             if i not in self.done:
                 # heading, speed
                 new_track = f.track + action[it2][0] * MAX_BEARING/8
                 f.track = (new_track + u.circle) % u.circle
                 f.airspeed = (action[it2][1]) * (self.max_speed - self.min_speed) + self.min_speed
-                it2 +=1
+                if not isMARL:
+                    it2 +=1
+            if isMARL:
+                it2 +=1 # we have a fixed number of actors, so we will still have actions even we dont use them
 
         # RDC: here you should implement your resolution actions
         ##########################################################
         return None
         ##########################################################
 
-    def reward(self) -> List:
+    def reward(self, isMARL) -> List:
         """
         Returns the reward assigned to each agent
         :return: reward assigned to each agent
@@ -104,11 +111,11 @@ class Environment(gym.Env):
         
         conflicts   = self.conflict_penalties() * weight_a
         drifts      = self.drift_penalties() * weight_b
-        severities  = self.conflict_severity() * weight_c 
+        #severities  = self.conflict_severity() * weight_c 
         speed_dif   = self.speedDifference() * weight_d 
-        target      = self.reachedTarget() * weight_e # can also try to just ouput negative rewards
+        #target      = self.reachedTarget() * weight_e # can also try to just ouput negative rewards
         
-        tot_reward  = conflicts + drifts + severities + speed_dif + target  
+        tot_reward  = conflicts + drifts + speed_dif 
 
         return tot_reward
 
@@ -133,7 +140,7 @@ class Environment(gym.Env):
         """
         speed_dif = np.zeros(self.num_flights)
         for i, f in enumerate(self.flights):
-            speed_dif[i] = abs(f.airspeed - f.optimal_airspeed)
+            speed_dif[i] = abs(f.airspeed - f.optimal_airspeed)/(self.max_speed - self.min_speed)
                     
         return speed_dif
         
@@ -207,13 +214,20 @@ class Environment(gym.Env):
                     if j not in self.done and j != i:
                         # predicted used instead of position, so ownship can work in regard to future position and still
                         # avoid a future conflict
-                        distance_all[i][j] = self.flights[i].prediction.distance(self.flights[j].prediction)
+                        distance_all[i][j] = self.flights[i].position.distance(self.flights[j].position)
 
                         # relative bearing
-                        dx = self.flights[i].prediction.x - self.flights[j].prediction.x
-                        dy = self.flights[i].prediction.y - self.flights[j].prediction.y
+                        dx = self.flights[i].position.x - self.flights[j].position.x
+                        dy = self.flights[i].position.y - self.flights[j].position.y
                         compass = math.atan2(dx, dy)
-                        bearing_all[i][j] = (compass + u.circle) % u.circle
+                        compass = (compass + u.circle) % u.circle
+                        compass = compass - self.flights[i].track
+                        if compass > math.pi:
+                            bearing_all[i][j] = -(u.circle - compass)
+                        elif compass < -math.pi:
+                            bearing_all[i][j] = (u.circle + compass) 
+                        else:
+                            bearing_all[i][j] = compass 
 
         for i, f in enumerate(self.flights):
             if i not in self.done:
@@ -247,7 +261,10 @@ class Environment(gym.Env):
                 # bearing to target
                 observations.append(float(f.drift))
 
-                observations_all.append(observations)
+            else: # the number of  next state should match the number of actions
+                observations = [0] * STATE_SIZE
+
+            observations_all.append(observations)
         # RDC: here you should implement your observation function
         ##########################################################
         return observations_all
@@ -298,7 +315,7 @@ class Environment(gym.Env):
                 # get new position and advance one time step
                 f.position._set_coords(position.x + dx * self.dt, position.y + dy * self.dt)
 
-    def step(self, action: List) -> Tuple[List, List, bool, Dict]:
+    def step(self, action: List, isMARL, NUMBER_ACTORS_MARL) -> Tuple[List, List, bool, Dict]:
         """
         Performs a simulation step
 
@@ -306,7 +323,7 @@ class Environment(gym.Env):
         :return: observation, reward, done status and other information
         """
         # apply resolution actions
-        self.resolution(action)
+        self.resolution(action, isMARL)
 
         # update positions
         self.update_positions()
@@ -318,10 +335,13 @@ class Environment(gym.Env):
         self.update_conflicts()
 
         # compute reward
-        rew = self.reward()
+        rew = self.reward(isMARL)
 
         # compute observation
         obs = self.observation()
+
+        while len(obs) < NUMBER_ACTORS_MARL:
+            obs.append([0]*STATE_SIZE)
 
         # increase steps counter
         self.i += 1
@@ -334,7 +354,7 @@ class Environment(gym.Env):
 
         return obs, rew, done, {}
 
-    def reset(self, number_flights_training) -> List:
+    def reset(self, number_flights_training, NUMBER_ACTORS_MARL) -> List:
         """
         Resets the environment and returns initial observation
         :return: initial observation
@@ -369,7 +389,11 @@ class Environment(gym.Env):
         self.done = set()
 
         # return initial observation
-        return self.observation()
+        obs = self.observation()
+        while len(obs) < NUMBER_ACTORS_MARL:
+            obs.append([0]*STATE_SIZE)
+
+        return obs
 
     def render(self, mode=None) -> None:
         """
@@ -424,7 +448,7 @@ class Environment(gym.Env):
 
             self.viewer.add_onetime(circle)
 
-        self.viewer.render()
+        self.viewer.render()        
 
     def close(self) -> None:
         """

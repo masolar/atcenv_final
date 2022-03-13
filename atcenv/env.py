@@ -217,8 +217,8 @@ class Environment(gym.Env):
                         distance_all[i][j] = self.flights[i].position.distance(self.flights[j].position)
 
                         # relative bearing
-                        dx = self.flights[i].position.x - self.flights[j].position.x
-                        dy = self.flights[i].position.y - self.flights[j].position.y
+                        dx = self.flights[j].position.x - self.flights[i].position.x
+                        dy = self.flights[j].position.y - self.flights[i].position.y
                         compass = math.atan2(dx, dy)
                         compass = (compass + u.circle) % u.circle
                         compass = compass - self.flights[i].track

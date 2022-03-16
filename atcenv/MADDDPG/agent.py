@@ -20,10 +20,10 @@ class Agent:
         
         self.agent_name = "agent_number_{}".format(i)
 
-        self.actor = Actor("actor_" + self.agent_name, self.n_actions)
+        self.actor = Actor("actor_" + self.agent_name)
         self.critic = Critic("critic_" + self.agent_name)
-        self.target_actor = Actor("target_actor_" + self.agent_name, self.n_actions)
-        self.target_critic = Critic("critic_" + self.agent_name)
+        self.target_actor = Actor("target_actor_" + self.agent_name)
+        self.target_critic = Critic("target_critic_" + self.agent_name)
         
         self.actor.compile(optimizer=opt.Adam(learning_rate=actor_lr))
         self.critic.compile(optimizer=opt.Adam(learning_rate=critic_lr))
@@ -46,8 +46,10 @@ class Agent:
     def save(self, scenarioName):
         repetition = int(scenarioName.split('EPISODE_')[1])
         if repetition % 500 == 0:
-            tc.save_DDQL('results', "DDPG_critic_" + scenarioName + "_" + self.critic.net_name + ".h5", self.critic)
-            tc.save_DDQL('results', "DDPG_actor_" + scenarioName + "_" + self.actor.net_name + ".h5", self.actor)
+            tc.save_DDQL('results', scenarioName + "_" + self.critic.net_name + ".h5", self.critic)
+            tc.save_DDQL('results', scenarioName + "_" + self.actor.net_name + ".h5", self.actor)
+            tc.save_DDQL('results', scenarioName + "_" + self.target_critic.net_name + ".h5", self.critic)
+            tc.save_DDQL('results', scenarioName + "_" + self.target_actor.net_name + ".h5", self.actor)
             tc.dump_pickle(self.L, 'results/save/loss_' + scenarioName)
         
     def load(self):

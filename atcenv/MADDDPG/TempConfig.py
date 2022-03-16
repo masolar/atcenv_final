@@ -11,7 +11,7 @@ def save_DDQL(Path, Name, agent):
     ''' Saves actions, rewards and states (images) in DataPath'''
     if not os.path.exists(Path):
         os.makedirs(Path)
-    agent.model.save(Path + "/" + Name)
+    agent.save_weights(Path + "/" + Name)
     print(Name, "saved")
 
 def dump_pickle(obj, name):

@@ -17,7 +17,7 @@ GAMMA = 0.99
 
 
 class Critic(tf.keras.Model):
-    def __init__(self, name,):
+    def __init__(self, name):
             
         super(Critic, self).__init__()
         
@@ -39,7 +39,7 @@ class Critic(tf.keras.Model):
         return q_value
 
 class Actor(tf.keras.Model):
-    def __init__(self, name, actions_dim):
+    def __init__(self, name):
         super(Actor, self).__init__()
         self.hidden_0 = HIDDEN1_UNITS_
         self.hidden_1 = HIDDEN2_UNITS_

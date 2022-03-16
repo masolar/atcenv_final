@@ -2,6 +2,7 @@ import numpy as np
 import tensorflow as tf
 from atcenv.MADDDPG.networks import Actor, Critic
 import atcenv.MADDDPG.TempConfig as tc
+from tensorflow.keras import optimizers as opt
 
 GAMMA = 0.99
 
@@ -19,19 +20,24 @@ class Agent:
         
         self.agent_name = "agent_number_{}".format(i)
 
-        tf.compat.v1.disable_eager_execution()
-        sess = tf.compat.v1.Session()
-        tf.compat.v1.keras.backend.set_session(sess)
+        self.actor = Actor("actor_" + self.agent_name, self.n_actions)
+        self.critic = Critic("critic_" + self.agent_name)
+        self.target_actor = Actor("target_actor_" + self.agent_name, self.n_actions)
+        self.target_critic = Critic("critic_" + self.agent_name)
         
-        self.actor = Actor("actor_" + self.agent_name, sess, state_size, action_size)
-        self.critic = Critic("critic_" + self.agent_name,  sess, state_size*n_agents, action_size*n_agents)        
+        self.actor.compile(optimizer=opt.Adam(learning_rate=actor_lr))
+        self.critic.compile(optimizer=opt.Adam(learning_rate=critic_lr))
+        self.target_actor.compile(optimizer=opt.Adam(learning_rate=actor_lr))
+        self.target_critic.compile(optimizer=opt.Adam(learning_rate=critic_lr))
+        
+        actor_weights = self.actor.get_weights()
+        critic_weights = self.critic.get_weights()
+        
+        self.target_actor.set_weights(actor_weights)
+        self.target_critic.set_weights(critic_weights)
         
     def get_actions(self, actor_states):
-        actions = self.actor.model.predict(actor_states.reshape(1, actor_states.shape[0]))
-        actions = actions[0] 
-        actions[0] = np.clip(actions[0] + np.random.uniform(-1,1), -1, 1) # tanh activation function
-        actions[1] = np.clip(actions[1] + np.random.uniform(-1,1), 0, 1) # sigmoid activation function
-
+        actions = self.actor(actor_states)
         return actions
     
     def add_loss(self, loss):
@@ -48,3 +54,18 @@ class Agent:
         self.actor.model.load_weights(self.allWeights_actor[0])
         self.critic.model.load_weights(self.allWeights_critic[0])
 
+    def update_target_networks(self, tau):
+        actor_weights = self.actor.weights
+        target_actor_weights = self.target_actor.weights
+        for index in range(len(actor_weights)):
+            target_actor_weights[index] = tau * actor_weights[index] + (1 - tau) * target_actor_weights[index]
+
+        self.target_actor.set_weights(target_actor_weights)
+        
+        critic_weights = self.critic.weights
+        target_critic_weights = self.target_critic.weights
+    
+        for index in range(len(critic_weights)):
+            target_critic_weights[index] = tau * critic_weights[index] + (1 - tau) * target_critic_weights[index]
+
+        self.target_critic.set_weights(target_critic_weights)

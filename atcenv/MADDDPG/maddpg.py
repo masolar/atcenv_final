@@ -6,8 +6,8 @@ import math
 import atcenv.units as u
 
 NUMBER_INTRUDERS_STATE = 5
-MAX_DISTANCE = 250*u.nm
-MAX_BEARING = 2*math.pi/2
+MAX_DISTANCE = 100*u.nm
+MAX_BEARING = math.pi
 
 class MADDPG(object):
     def __init__(self, n_agents, state_size, action_size):      
@@ -19,11 +19,11 @@ class MADDPG(object):
     def normalizeState(self, s_t, max_speed, min_speed):
         # distance to closest #NUMBER_INTRUDERS_STATE intruders
         for i in range(0, NUMBER_INTRUDERS_STATE):
-            s_t[i] = s_t[i]/MAX_DISTANCE
+            s_t[i] = min(s_t[i]/MAX_DISTANCE, 1)        
 
         # relative bearing to closest #NUMBER_INTRUDERS_STATE intruders
         for i in range(NUMBER_INTRUDERS_STATE, NUMBER_INTRUDERS_STATE*2):
-            s_t[i] = s_t[i]/MAX_BEARING
+            s_t[i] = s_t[i]/MAX_BEARING       
 
         # current speed
         if s_t[NUMBER_INTRUDERS_STATE*2] >= min_speed:

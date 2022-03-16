@@ -19,7 +19,7 @@ RED = [255, 0, 0]
 
 NUMBER_INTRUDERS_STATE = 5
 MAX_DISTANCE = 250*u.nm
-MAX_BEARING = 2*math.pi
+MAX_BEARING = math.pi
 
 STATE_SIZE = 14
 ACTION_SIZE = 2
@@ -85,7 +85,7 @@ class Environment(gym.Env):
         for i, f in enumerate(self.flights):
             if i not in self.done:
                 # heading, speed
-                new_track = f.track + action[it2][0] * MAX_BEARING/8
+                new_track = f.track + action[it2][0] * MAX_BEARING/12
                 f.track = (new_track + u.circle) % u.circle
                 f.airspeed = (action[it2][1]) * (self.max_speed - self.min_speed) + self.min_speed
                 if not isMARL:
@@ -108,16 +108,30 @@ class Environment(gym.Env):
         weight_c    = -1/5.
         weight_d    = -1/5.
         weight_e    = + 1  
+        weight_f    = -1
         
         conflicts   = self.conflict_penalties() * weight_a
         drifts      = self.drift_penalties() * weight_b
         #severities  = self.conflict_severity() * weight_c 
         speed_dif   = self.speedDifference() * weight_d 
-        #target      = self.reachedTarget() * weight_e # can also try to just ouput negative rewards
+        target      = self.reachedTarget() * weight_e # can also try to just ouput negative rewards
+        distance_from_target = self.distanceTarget() * weight_f 
         
-        tot_reward  = conflicts + drifts + speed_dif 
+        tot_reward  = conflicts + drifts + speed_dif + target + distance_from_target
 
         return tot_reward
+
+    def distanceTarget(self):
+        """
+        Returns a 
+        """        
+        max_distance = 100*u.nm
+        dist_total = np.zeros(self.num_flights)
+        for i, f in enumerate(self.flights):
+            if i not in self.done:
+                dist_total[i] = f.position.distance(f.target)/max_distance                
+                    
+        return dist_total
 
     def reachedTarget(self):
         """
@@ -219,15 +233,14 @@ class Environment(gym.Env):
                         # relative bearing
                         dx = self.flights[j].position.x - self.flights[i].position.x
                         dy = self.flights[j].position.y - self.flights[i].position.y
-                        compass = math.atan2(dx, dy)
-                        compass = (compass + u.circle) % u.circle
-                        compass = compass - self.flights[i].track
+                        compass = math.atan2(dx, dy)                             
+                        compass = compass - self.flights[i].track  
+                        compass = (compass + u.circle) % u.circle       
                         if compass > math.pi:
-                            bearing_all[i][j] = -(u.circle - compass)
+                            compass = -(u.circle - compass)
                         elif compass < -math.pi:
-                            bearing_all[i][j] = (u.circle + compass) 
-                        else:
-                            bearing_all[i][j] = compass 
+                            compass = u.circle + compass
+                        bearing_all[i][j] = compass 
 
         for i, f in enumerate(self.flights):
             if i not in self.done:

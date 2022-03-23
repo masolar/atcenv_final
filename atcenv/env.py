@@ -22,7 +22,7 @@ NUMBER_INTRUDERS_STATE = 1
 MAX_DISTANCE = 250*u.nm
 MAX_BEARING = math.pi
 
-STATE_SIZE = 14
+STATE_SIZE = 8
 ACTION_SIZE = 2
 
 class Environment(gym.Env):

@@ -147,7 +147,11 @@ if __name__ == "__main__":
         RL.episode_end(episode_name)
         tc.dump_pickle(number_steps_until_done, 'results/save/numbersteps_' + episode_name)
         tc.dump_pickle(number_conflicts, 'results/save/numberconflicts_' + episode_name)
-        print(episode_name,'ended in', number_steps_until_done, 'runs, with', number_conflicts, 'conflicts, number of aircraft=', number_of_aircraft, ', done aircraft=', len(env.done))        
+        print('--------------------------------------------------------')
+        print(f' {episode_name} ended in {number_steps_until_done} runs, with {number_conflicts} conflicts.')
+        print(f'Number of aircraft: {number_of_aircraft}')
+        print(f'Done aircraft: {len(env.done)}')  
+        print(f'Done aircraft IDs: {env.done}')      
         np.savetxt('rewards.csv', rew_list)
         np.savetxt('states.csv', state_list)
         # close rendering

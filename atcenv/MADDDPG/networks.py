@@ -1,15 +1,15 @@
 import numpy as np
 import tensorflow as tf
 from tensorflow.keras.layers import Dense
-from tensorflow.keras.initializers import random_uniform
+from tensorflow.keras.initializers import random_uniform, random_normal
 
 HIDDEN1_UNITS_ = 120
 HIDDEN2_UNITS_ = 120
 HUBER_LOSS_DELTA = 1
 
 TAU = 0.001  # Target Network HyperParameters, for soft update of target parameters
-LRA = 0.0001  # Learning rate for Actor
-LRC = 0.001  # Lerning rate for Critic
+LRA = 0.00005  # Learning rate for Actor
+LRC = 0.0001  # Lerning rate for Critic
 EPSILON = 0.1  
 ALPHA = 0.9  # learning rate
 GAMMA = 0.99
@@ -46,10 +46,10 @@ class Actor(tf.keras.Model):
         
         self.net_name = name
 
-        self.dense_0 = Dense(self.hidden_0, activation='relu')
-        self.dense_1 = Dense(self.hidden_1, activation='relu')
-        self.policy_1 = Dense(1, activation='tanh') 
-        self.policy_2 = Dense(1, activation='sigmoid') 
+        self.dense_0 = Dense(self.hidden_0, activation='relu',kernel_initializer= random_normal(stddev=0.05))
+        self.dense_1 = Dense(self.hidden_1, activation='relu',kernel_initializer= random_normal(stddev=0.05))
+        self.policy_1 = Dense(1, activation='tanh',kernel_initializer= random_normal(stddev=0.05)) 
+        self.policy_2 = Dense(1, activation='sigmoid',kernel_initializer= random_normal(stddev=0.05)) 
 
     def call(self, state):
         x = self.dense_0(state)

@@ -112,6 +112,7 @@ if __name__ == "__main__":
 
             # perform step with dummy action
             obs, rew, done, info = env.step(actions, type(RL) is MADDPG, NUMBER_ACTORS_MARL)
+            obs2 = copy.deepcopy(obs) # obs will get normalized
             for rew_i in rew:
                 rew_list.append(rew_i)
             for obs_i in obs:
@@ -130,10 +131,10 @@ if __name__ == "__main__":
                         RL.setResult(episode_name, obs0_cluster, obs_cluster, rew_cluster, actions_cluster, done, env.max_speed, env.min_speed)
                 else:                    
                     rew = sum(rew)                    
-                    RL.setResult(episode_name, obs0, obs, rew, actions, done, env.max_speed, env.min_speed)
+                    RL.setResult(episode_name, obs0, obs2, rew, actions, done, env.max_speed, env.min_speed)
             else:
                 for it_obs in range(len(obs)):
-                    RL.setResult(episode_name, obs0[it_obs], obs[it_obs], rew[it_obs], actions[it_obs], done, env.max_speed, env.min_speed)
+                    RL.setResult(episode_name, obs0[it_obs], obs2[it_obs], rew[it_obs], actions[it_obs], done, env.max_speed, env.min_speed)
 
             # comment render out for faster processing
             env.render()

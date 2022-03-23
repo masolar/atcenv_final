@@ -16,10 +16,10 @@ GAMMA = 0.99
 
 
 class SuperAgent:
-    def __init__(self, n_agents, state_size, action_size, max_episode_len):
+    def __init__(self, n_agents, state_size, action_size):
         self.replay_buffer = ReplayBuffer(BUFFER_SIZE, BATCH_SIZE, BATCH_SIZE, n_agents, state_size, action_size)
         self.n_agents = n_agents
-        self.agents = [Agent(i, LRA, LRC, GAMMA, TAU, state_size, action_size, n_agents, max_episode_len) for i in range(self.n_agents)]
+        self.agents = [Agent(i, LRA, LRC, GAMMA, TAU, state_size, action_size, n_agents) for i in range(self.n_agents)]
         self.action_size = action_size
         self.counter = 1
         

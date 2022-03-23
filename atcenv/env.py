@@ -34,7 +34,7 @@ class Environment(gym.Env):
                  min_area: Optional[float] = 125. * 125.,
                  max_speed: Optional[float] = 500.,
                  min_speed: Optional[float] = 400,
-                 max_episode_len: Optional[int] = 1000,
+                 max_episode_len: Optional[int] = 500,
                  min_distance: Optional[float] = 5.,
                  distance_init_buffer: Optional[float] = 5.,
                  **kwargs):
@@ -103,7 +103,7 @@ class Environment(gym.Env):
         Returns the reward assigned to each agent
         :return: reward assigned to each agent
         """
-        weight_a    = -1/10.
+        weight_a    = -1
         weight_b    = -1/5.
         weight_c    = -1/5.
         weight_d    = -1/5.

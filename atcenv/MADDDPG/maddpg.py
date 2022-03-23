@@ -10,11 +10,11 @@ MAX_DISTANCE = 100*u.nm
 MAX_BEARING = math.pi
 
 class MADDPG(object):
-    def __init__(self, n_agents, state_size, action_size, max_episode_len):      
+    def __init__(self, n_agents, state_size, action_size):      
         # save performed actions
         self.actions = dict()
         self.reward_per_action = dict()
-        self.super_agent = SuperAgent(n_agents, state_size, action_size, max_episode_len)
+        self.super_agent = SuperAgent(n_agents, state_size, action_size)
 
     def normalizeState(self, s_t, max_speed, min_speed):
         # distance to closest #NUMBER_INTRUDERS_STATE intruders

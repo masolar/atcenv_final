@@ -7,7 +7,9 @@ from tensorflow.keras import optimizers as opt
 GAMMA = 0.99
 
 class Agent:
-    def __init__(self, i, actor_lr, critic_lr, gamma, tau, state_size, action_size,n_agents):
+    def __init__(self, i, actor_lr, critic_lr, gamma, tau, state_size, action_size,n_agents, max_episode_len):
+        
+        self.max_episode_len = max_episode_len
         
         self.gamma = gamma
         self.tau = tau
@@ -45,7 +47,7 @@ class Agent:
     
     def save(self, scenarioName):
         repetition = int(scenarioName.split('EPISODE_')[1])
-        if repetition % 500 == 0:
+        if repetition % self.max_episode_len == 0:
             tc.save_DDQL('results', scenarioName + "_" + self.critic.net_name + ".h5", self.critic)
             tc.save_DDQL('results', scenarioName + "_" + self.actor.net_name + ".h5", self.actor)
             tc.save_DDQL('results', scenarioName + "_" + self.target_critic.net_name + ".h5", self.critic)

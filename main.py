@@ -44,7 +44,7 @@ if __name__ == "__main__":
     env = Environment(**vars(args.env))
 
     #RL = DDPG()
-    RL = MADDPG(NUMBER_ACTORS_MARL, STATE_SIZE, ACTION_SIZE)
+    RL = MADDPG(NUMBER_ACTORS_MARL, STATE_SIZE, ACTION_SIZE, env.max_episode_len)
     #RL = SAC()
 
     # increase number of flights

@@ -128,8 +128,8 @@ if __name__ == "__main__":
                         actions_cluster =  np.array(actions)[indexes]
                         rew_cluster = sum(rew[indexes])
                         RL.setResult(episode_name, obs0_cluster, obs_cluster, rew_cluster, actions_cluster, done, env.max_speed, env.min_speed)
-                else:
-                    rew = sum(rew)
+                else:                    
+                    rew = sum(rew)                    
                     RL.setResult(episode_name, obs0, obs, rew, actions, done, env.max_speed, env.min_speed)
             else:
                 for it_obs in range(len(obs)):
@@ -147,7 +147,7 @@ if __name__ == "__main__":
         RL.episode_end(episode_name)
         tc.dump_pickle(number_steps_until_done, 'results/save/numbersteps_' + episode_name)
         tc.dump_pickle(number_conflicts, 'results/save/numberconflicts_' + episode_name)
-        print(episode_name,'ended in', number_steps_until_done, 'runs, with', number_conflicts, 'conflicts, number of aircraft=', number_of_aircraft)        
+        print(episode_name,'ended in', number_steps_until_done, 'runs, with', number_conflicts, 'conflicts, number of aircraft=', number_of_aircraft, ', done aircraft=', len(env.done))        
         np.savetxt('rewards.csv', rew_list)
         np.savetxt('states.csv', state_list)
         # close rendering

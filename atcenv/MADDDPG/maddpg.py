@@ -66,7 +66,7 @@ class MADDPG(object):
 
     def episode_end(self, scenarioName):
         print('episode end', scenarioName)      
-        print(scenarioName, 'min reward', min(self.reward_per_action[scenarioName]), 'max reward', max(self.reward_per_action[scenarioName]))
+        print(scenarioName, 'average reward', np.average(self.reward_per_action[scenarioName]))
         tc.dump_pickle(self.reward_per_action[scenarioName], 'results/save/reward_' + scenarioName)
         tc.dump_pickle(self.actions[scenarioName], 'results/save/actions_' + scenarioName)
         self.super_agent.episode_end(scenarioName)

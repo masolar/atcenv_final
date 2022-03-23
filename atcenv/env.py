@@ -103,21 +103,21 @@ class Environment(gym.Env):
         Returns the reward assigned to each agent
         :return: reward assigned to each agent
         """
-        weight_a    = -1
-        weight_b    = -1/5.
-        weight_c    = -1/5.
-        weight_d    = -1/5.
-        weight_e    = + 1  
-        weight_f    = -1
+        weight_a    = -5.
+        weight_b    = 2/5.
+        weight_c    = -5.
+        weight_d    = 0
+        weight_e    = 0
+        weight_f    = 0
         
         conflicts   = self.conflict_penalties() * weight_a
         drifts      = self.drift_penalties() * weight_b
-        #severities  = self.conflict_severity() * weight_c 
+        severities  = self.conflict_severity() * weight_c 
         speed_dif   = self.speedDifference() * weight_d 
         target      = self.reachedTarget() * weight_e # can also try to just ouput negative rewards
         distance_from_target = self.distanceTarget() * weight_f 
         
-        tot_reward  = conflicts + drifts + speed_dif + target + distance_from_target
+        tot_reward  = conflicts + severities + drifts + speed_dif + target + distance_from_target
 
         return tot_reward
 
@@ -185,7 +185,7 @@ class Environment(gym.Env):
         drift = np.zeros(self.num_flights)
         for i, f in enumerate(self.flights):
             if i not in self.done:
-                drift[i] = abs(f.drift)
+                drift[i] = 0.5 - abs(f.drift)
         
         return drift
             

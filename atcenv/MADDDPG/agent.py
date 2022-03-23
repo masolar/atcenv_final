@@ -38,7 +38,7 @@ class Agent:
         
     def get_actions(self, actor_states):
         
-        noise = tf.random.normal(shape=[self.n_actions], mean = 0, stddev = 0.1)
+        noise = tf.random.normal(shape=[self.n_actions], mean = 0, stddev = 0.2)
         actions = self.actor(actor_states)
         actions = actions + noise
         return actions

@@ -147,7 +147,7 @@ if __name__ == "__main__":
                         RL.setResult(episode_name, obs0[it_obs], obs2[it_obs], rew[it_obs], actions[it_obs], done, env.max_speed, env.min_speed)
             
             # comment render out for faster processing
-            if e%1 == 0:
+            if e%10 == 0:
                 env.render()
             number_steps_until_done += 1
             number_conflicts += sum(env.conflicts)

@@ -74,8 +74,8 @@ class MADDPG(object):
         self.super_agent.update_batch(state, nextstate, actions, all_state, all_nextstate, reward, done)
 
     def episode_end(self, scenarioName):
-        print('episode end', scenarioName)      
-        print(scenarioName, 'average reward', np.average(self.reward_per_action[scenarioName]))
+        # print('episode end', scenarioName)      
+        # print(scenarioName, 'average reward', np.average(self.reward_per_action[scenarioName]))
         tc.dump_pickle(self.reward_per_action[scenarioName], 'results/save/reward_' + scenarioName)
         tc.dump_pickle(self.actions[scenarioName], 'results/save/actions_' + scenarioName)
         self.super_agent.episode_end(scenarioName)

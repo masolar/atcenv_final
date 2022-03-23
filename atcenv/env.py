@@ -8,6 +8,7 @@ from atcenv.definitions import *
 from gym.envs.classic_control import rendering
 from shapely.geometry import LineString
 
+import math as m
 # our own packages
 import numpy as np
 

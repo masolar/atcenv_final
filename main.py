@@ -23,7 +23,7 @@ if __name__ == "__main__":
     from pandas import DataFrame
     from shapely.geometry import Point
 
-    STATE_SIZE = 14
+    STATE_SIZE = 8
     ACTION_SIZE = 2
     NUMBER_ACTORS_MARL = 10
 

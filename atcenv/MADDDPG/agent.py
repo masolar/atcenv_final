@@ -37,7 +37,10 @@ class Agent:
         self.target_critic.set_weights(critic_weights)
         
     def get_actions(self, actor_states):
+        
+        noise = tf.random.normal(shape=[self.n_actions], mean = 0, stddev = 0.2)
         actions = self.actor(actor_states)
+        actions = actions + noise
         return actions
     
     def add_loss(self, loss):

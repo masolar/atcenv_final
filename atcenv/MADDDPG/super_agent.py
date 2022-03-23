@@ -38,6 +38,7 @@ class SuperAgent:
 
     def update_batch(self,state, nextstate, actions, all_state, all_nextstate, reward, done):
         # Store transition in the replay buffer.
+
         self.replay_buffer.add_record(state, nextstate, actions, all_state, all_nextstate, reward, done)
         if self.replay_buffer.check_buffer_size() and self.counter % 10 == 0:
             self.train() 
@@ -46,11 +47,11 @@ class SuperAgent:
     
     def train(self):        
         state, reward, next_state, done, actors_state, actors_next_state, actors_action = self.replay_buffer.get_minibatch()
-
+        
         states = tf.convert_to_tensor(state, dtype=tf.float32)
         rewards = tf.convert_to_tensor(reward, dtype=tf.float32)
         next_states = tf.convert_to_tensor(next_state, dtype=tf.float32)
-        
+
         actors_states = [tf.convert_to_tensor(s, dtype=tf.float32) for s in actors_state]
         actors_next_states = [tf.convert_to_tensor(s, dtype=tf.float32) for s in actors_next_state]
         actors_actions = [tf.convert_to_tensor(s, dtype=tf.float32) for s in actors_action]

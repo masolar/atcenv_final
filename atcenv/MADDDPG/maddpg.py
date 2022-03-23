@@ -5,7 +5,11 @@ import atcenv.MADDDPG.TempConfig as tc
 import math
 import atcenv.units as u
 
-NUMBER_INTRUDERS_STATE = 5
+NUMBER_INTRUDERS_STATE = 1
+
+MEANS = [57000,57000,1300,-1500,0,0,0,0]
+STDS = [31500,31500,46000,46000,1,1,1,1]
+
 MAX_DISTANCE = 100*u.nm
 MAX_BEARING = math.pi
 
@@ -19,22 +23,27 @@ class MADDPG(object):
     def normalizeState(self, s_t, max_speed, min_speed):
         # distance to closest #NUMBER_INTRUDERS_STATE intruders
         for i in range(0, NUMBER_INTRUDERS_STATE):
-            s_t[i] = min(s_t[i]/MAX_DISTANCE, 1)        
+            s_t[i] = (s_t[i]-MEANS[0])/(STDS[0]*2)
 
         # relative bearing to closest #NUMBER_INTRUDERS_STATE intruders
         for i in range(NUMBER_INTRUDERS_STATE, NUMBER_INTRUDERS_STATE*2):
-            s_t[i] = s_t[i]/MAX_BEARING       
+            s_t[i] = (s_t[i]-MEANS[1])/(STDS[1]*2)
+
+        for i in range(NUMBER_INTRUDERS_STATE*2, NUMBER_INTRUDERS_STATE*3):
+            s_t[i] = (s_t[i]-MEANS[2])/(STDS[2]*2)
+    
+        for i in range(NUMBER_INTRUDERS_STATE*3, NUMBER_INTRUDERS_STATE*4):
+            s_t[i] = (s_t[i]-MEANS[3])/(STDS[3]*2)
 
         # current speed
-        if s_t[NUMBER_INTRUDERS_STATE*2] >= min_speed:
-            s_t[NUMBER_INTRUDERS_STATE*2 ] = (s_t[NUMBER_INTRUDERS_STATE*2]-min_speed)/(max_speed-min_speed)
+        s_t[NUMBER_INTRUDERS_STATE*4] = ((s_t[NUMBER_INTRUDERS_STATE*4]-min_speed)/(max_speed-min_speed))*2 - 1
         # optimal speed
-        if s_t[NUMBER_INTRUDERS_STATE*2 + 1] >= min_speed:
-            s_t[NUMBER_INTRUDERS_STATE*2 + 1] = (s_t[NUMBER_INTRUDERS_STATE*2 + 1]-min_speed)/(max_speed-min_speed)
-        # distance to target
-        s_t[NUMBER_INTRUDERS_STATE*2 + 2] = s_t[NUMBER_INTRUDERS_STATE*2 + 2]/MAX_DISTANCE
-        # bearing to target
-        s_t[NUMBER_INTRUDERS_STATE*2 + 3] = s_t[NUMBER_INTRUDERS_STATE*2 + 3]/MAX_BEARING
+        s_t[NUMBER_INTRUDERS_STATE*4 + 1] = ((s_t[NUMBER_INTRUDERS_STATE*4 + 1]-min_speed)/(max_speed-min_speed))*2 - 1
+        # # distance to target
+        # s_t[NUMBER_INTRUDERS_STATE*2 + 2] = s_t[NUMBER_INTRUDERS_STATE*2 + 2]/MAX_DISTANCE
+        # # bearing to target
+        s_t[NUMBER_INTRUDERS_STATE*4+2] = s_t[NUMBER_INTRUDERS_STATE*4+2]
+        s_t[NUMBER_INTRUDERS_STATE*4+3] = s_t[NUMBER_INTRUDERS_STATE*4+3]
 
         return s_t
 
@@ -65,8 +74,8 @@ class MADDPG(object):
         self.super_agent.update_batch(state, nextstate, actions, all_state, all_nextstate, reward, done)
 
     def episode_end(self, scenarioName):
-        print('episode end', scenarioName)      
-        print(scenarioName, 'average reward', np.average(self.reward_per_action[scenarioName]))
+        # print('episode end', scenarioName)      
+        # print(scenarioName, 'average reward', np.average(self.reward_per_action[scenarioName]))
         tc.dump_pickle(self.reward_per_action[scenarioName], 'results/save/reward_' + scenarioName)
         tc.dump_pickle(self.actions[scenarioName], 'results/save/actions_' + scenarioName)
         self.super_agent.episode_end(scenarioName)

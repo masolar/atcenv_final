@@ -76,7 +76,7 @@ class Flight:
         return (compass + u.circle) % u.circle
 
     @property
-    def prediction(self, dt: Optional[float] = 120) -> Point:
+    def prediction(self, dt: Optional[float] = 20) -> Point:
         """
         Predicts the future position after dt seconds, maintaining the current speed and track
         :param dt: prediction look-ahead time (in seconds)

@@ -23,7 +23,7 @@ if __name__ == "__main__":
     from pandas import DataFrame
     from shapely.geometry import Point
 
-    STATE_SIZE = 14
+    STATE_SIZE = 8
     ACTION_SIZE = 2
     NUMBER_ACTORS_MARL = 10
 
@@ -51,6 +51,10 @@ if __name__ == "__main__":
     rew_list = []
     state_list = []
 
+    tot_rew_list = []
+    conf_list = []
+
+    obs_list = []
     # run episodes
     for e in tqdm(range(args.episodes)):        
         episode_name = "EPISODE_" + str(e) 
@@ -68,11 +72,15 @@ if __name__ == "__main__":
         number_steps_until_done = 0
         # save how many conflics happened in eacj episode
         number_conflicts = 0
-
+        tot_rew = 0
+        it = 0
         # execute one episode
         while not done:           
             obs0 = copy.deepcopy(obs)
             
+            # for ob in obs0:
+            #     obs_list.append(RL.normalizeState(ob,env.max_speed, env.min_speed))
+            # print(obs0)
             # get actions from RL model 
             if type(RL) is MADDPG:
                 actions = [ [] for _ in range(number_of_aircraft)]
@@ -118,30 +126,40 @@ if __name__ == "__main__":
             for obs_i in obs:
                 state_list.append(obs_i)
             
+            tot_rew += rew
             # train the RL model
             # comment out on testing
-            if type(RL) is MADDPG:
-                if number_of_aircraft > NUMBER_ACTORS_MARL:
-                     for clusters_idx in range(n_cluster):
-                        indexes = np.array(cluster_indexes[cluster_idx])
-                        obs0_cluster = np.array(obs0)[indexes]
-                        obs_cluster  =  np.array(obs)[indexes]
-                        actions_cluster =  np.array(actions)[indexes]
-                        rew_cluster = sum(rew[indexes])
-                        RL.setResult(episode_name, obs0_cluster, obs_cluster, rew_cluster, actions_cluster, done, env.max_speed, env.min_speed)
-                else:                    
-                    rew = sum(rew)                    
-                    RL.setResult(episode_name, obs0, obs2, rew, actions, done, env.max_speed, env.min_speed)
-            else:
-                for it_obs in range(len(obs)):
-                    RL.setResult(episode_name, obs0[it_obs], obs2[it_obs], rew[it_obs], actions[it_obs], done, env.max_speed, env.min_speed)
+
+            if number_steps_until_done > 0:
+                if type(RL) is MADDPG:
+                    if number_of_aircraft > NUMBER_ACTORS_MARL:
+                        for clusters_idx in range(n_cluster):
+                            indexes = np.array(cluster_indexes[cluster_idx])
+                            obs0_cluster = np.array(obs0)[indexes]
+                            obs_cluster  =  np.array(obs)[indexes]
+                            actions_cluster =  np.array(actions)[indexes]
+                            rew_cluster = sum(rew[indexes])
+                            RL.setResult(episode_name, obs0_cluster, obs_cluster, rew_cluster, actions_cluster, done, env.max_speed, env.min_speed)
+                    else:                    
+                        rew = sum(rew)             
+                        RL.setResult(episode_name, obs0, obs2, rew, actions, done, env.max_speed, env.min_speed)
+                else:
+                    for it_obs in range(len(obs)):
+                        RL.setResult(episode_name, obs0[it_obs], obs2[it_obs], rew[it_obs], actions[it_obs], done, env.max_speed, env.min_speed)
 
             # comment render out for faster processing
-            env.render()
+            if e%10 == 0:
+                env.render()
             number_steps_until_done += 1
             number_conflicts += sum(env.conflicts)
             #time.sleep(0.05)
 
+        if len(tot_rew_list) < 100:
+            tot_rew_list.append(sum(tot_rew)/number_of_aircraft)
+            conf_list.append(number_conflicts)
+        else:
+            tot_rew_list[e%100 -1] = sum(tot_rew)/number_of_aircraft
+            conf_list[e%100 -1] = number_conflicts
         # save information
         #RL.update() # train the model
         # comment out on testing
@@ -153,6 +171,8 @@ if __name__ == "__main__":
         print(f'Number of aircraft: {number_of_aircraft}')
         print(f'Done aircraft: {len(env.done)}')  
         print(f'Done aircraft IDs: {env.done}')      
+
+        print('conflicts (rolling av100)', np.mean(np.array(conf_list)), 'reward (rolling av100)=', np.mean(np.array(tot_rew_list)))        
         np.savetxt('rewards.csv', rew_list)
         np.savetxt('states.csv', state_list)
         # close rendering

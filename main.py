@@ -129,6 +129,7 @@ if __name__ == "__main__":
             tot_rew += rew
             # train the RL model
             # comment out on testing
+
             if number_steps_until_done > 0:
                 if type(RL) is MADDPG:
                     if number_of_aircraft > NUMBER_ACTORS_MARL:
@@ -145,7 +146,7 @@ if __name__ == "__main__":
                 else:
                     for it_obs in range(len(obs)):
                         RL.setResult(episode_name, obs0[it_obs], obs2[it_obs], rew[it_obs], actions[it_obs], done, env.max_speed, env.min_speed)
-            
+
             # comment render out for faster processing
             if e%10 == 0:
                 env.render()

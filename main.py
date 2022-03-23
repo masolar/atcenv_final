@@ -53,6 +53,8 @@ if __name__ == "__main__":
 
     tot_rew_list = []
     conf_list = []
+
+    obs_list = []
     # run episodes
     for e in tqdm(range(args.episodes)):        
         episode_name = "EPISODE_" + str(e) 
@@ -71,11 +73,14 @@ if __name__ == "__main__":
         # save how many conflics happened in eacj episode
         number_conflicts = 0
         tot_rew = 0
-
+        it = 0
         # execute one episode
         while not done:           
             obs0 = copy.deepcopy(obs)
             
+            # for ob in obs0:
+            #     obs_list.append(RL.normalizeState(ob,env.max_speed, env.min_speed))
+            # print(obs0)
             # get actions from RL model 
             if type(RL) is MADDPG:
                 actions = [ [] for _ in range(number_of_aircraft)]
@@ -115,6 +120,7 @@ if __name__ == "__main__":
 
             # perform step with dummy action
             obs, rew, done, info = env.step(actions, type(RL) is MADDPG, NUMBER_ACTORS_MARL)
+            obs2 = copy.deepcopy(obs) # obs will get normalized
             for rew_i in rew:
                 rew_list.append(rew_i)
             for obs_i in obs:
@@ -123,24 +129,25 @@ if __name__ == "__main__":
             tot_rew += rew
             # train the RL model
             # comment out on testing
-            if type(RL) is MADDPG:
-                if number_of_aircraft > NUMBER_ACTORS_MARL:
-                     for clusters_idx in range(n_cluster):
-                        indexes = np.array(cluster_indexes[cluster_idx])
-                        obs0_cluster = np.array(obs0)[indexes]
-                        obs_cluster  =  np.array(obs)[indexes]
-                        actions_cluster =  np.array(actions)[indexes]
-                        rew_cluster = sum(rew[indexes])
-                        RL.setResult(episode_name, obs0_cluster, obs_cluster, rew_cluster, actions_cluster, done, env.max_speed, env.min_speed)
-                else:                    
-                    rew = sum(rew)                    
-                    RL.setResult(episode_name, obs0, obs, rew, actions, done, env.max_speed, env.min_speed)
-            else:
-                for it_obs in range(len(obs)):
-                    RL.setResult(episode_name, obs0[it_obs], obs[it_obs], rew[it_obs], actions[it_obs], done, env.max_speed, env.min_speed)
-
+            if number_steps_until_done > 0:
+                if type(RL) is MADDPG:
+                    if number_of_aircraft > NUMBER_ACTORS_MARL:
+                        for clusters_idx in range(n_cluster):
+                            indexes = np.array(cluster_indexes[cluster_idx])
+                            obs0_cluster = np.array(obs0)[indexes]
+                            obs_cluster  =  np.array(obs)[indexes]
+                            actions_cluster =  np.array(actions)[indexes]
+                            rew_cluster = sum(rew[indexes])
+                            RL.setResult(episode_name, obs0_cluster, obs_cluster, rew_cluster, actions_cluster, done, env.max_speed, env.min_speed)
+                    else:                    
+                        rew = sum(rew)             
+                        RL.setResult(episode_name, obs0, obs2, rew, actions, done, env.max_speed, env.min_speed)
+                else:
+                    for it_obs in range(len(obs)):
+                        RL.setResult(episode_name, obs0[it_obs], obs2[it_obs], rew[it_obs], actions[it_obs], done, env.max_speed, env.min_speed)
+            
             # comment render out for faster processing
-            if e%10 == 0:
+            if e%1 == 0:
                 env.render()
             number_steps_until_done += 1
             number_conflicts += sum(env.conflicts)

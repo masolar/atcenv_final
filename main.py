@@ -1,12 +1,13 @@
 """
-Main file. 
+Example
 """
 
-
+import numpy as np
+import tracemalloc
 
 if __name__ == "__main__":
     import random
-    random.seed(42)
+    random.seed(52)
     from jsonargparse import ArgumentParser, ActionConfigFile
     from atcenv import Environment
     import time
@@ -14,18 +15,10 @@ if __name__ == "__main__":
 
     # RL models
     from atcenv.DDPG.DDPG import DDPG
-    from atcenv.MADDDPG.maddpg import MADDPG
     import atcenv.DDPG.TempConfig as tc
     from atcenv.SAC.sac import SAC
+    from atcenv.MASAC.masac_agent import MaSacAgent
     import copy
-    import numpy as np    
-    from sklearn.cluster import KMeans
-    from pandas import DataFrame
-    from shapely.geometry import Point
-
-    STATE_SIZE = 8
-    ACTION_SIZE = 2
-    NUMBER_ACTORS_MARL = 10
 
     parser = ArgumentParser(
         prog='Conflict resolution environment',
@@ -39,32 +32,35 @@ if __name__ == "__main__":
 
     # parse arguments
     args = parser.parse_args()
+    #tracemalloc.start()
 
     # init environment
     env = Environment(**vars(args.env))
 
     #RL = DDPG()
-    RL = MADDPG(NUMBER_ACTORS_MARL, STATE_SIZE, ACTION_SIZE)
-    #RL = SAC()
+    RL = MaSacAgent()
 
+    load_models = False
+    test = False
+
+    if load_models:
+        RL.load_models()
     # increase number of flights
-    rew_list = []
-    state_list = []
-
     tot_rew_list = []
     conf_list = []
-
-    obs_list = []
     # run episodes
-    for e in tqdm(range(args.episodes)):        
+    state_list = []
+    for e in tqdm(range(args.episodes)):   
+        print('\n-----------------------------------------------------')
+        #snapshot1 = tracemalloc.take_snapshot()     
         episode_name = "EPISODE_" + str(e) 
 
         # reset environment
         # train with an increasing number of aircraft
-        #number_of_aircraft = min(int(e/100)+1,10)
-        number_of_aircraft = 10
-        obs = env.reset(number_of_aircraft, NUMBER_ACTORS_MARL)
-
+        number_of_aircraft = 10 #min(int(e/500)+5,10)
+        obs = env.reset(number_of_aircraft)
+        for obs_i in obs:
+            RL.normalizeState(obs_i, env.max_speed, env.min_speed)
         # set done status to false
         done = False
 
@@ -73,87 +69,41 @@ if __name__ == "__main__":
         # save how many conflics happened in eacj episode
         number_conflicts = 0
         tot_rew = 0
-        it = 0
         # execute one episode
-        while not done:           
+        while not done:
+            #for obs_i in obs:
+            # print(obs_i)
+            actions = RL.do_step(obs,env.max_speed, env.min_speed, test=test)
+                # actions.append((np.random.rand(2)-0.5)*2)
+                #actions.append([0,0])
+
             obs0 = copy.deepcopy(obs)
-            
-            # for ob in obs0:
-            #     obs_list.append(RL.normalizeState(ob,env.max_speed, env.min_speed))
-            # print(obs0)
-            # get actions from RL model 
-            if type(RL) is MADDPG:
-                actions = [ [] for _ in range(number_of_aircraft)]
-                if number_of_aircraft > NUMBER_ACTORS_MARL: # we need to divide all aircraft into groups based on their current position
-                    n_cluster = int(np.ceil(number_of_aircraft/NUMBER_ACTORS_MARL))
-                    ids = []
-                    x = []
-                    y = []
-                    for flight_idx in range(env.num_flights):
-                        if flight_idx not in env.done:
-                            ids.append(flight_idx)
-                            x.append(env.flights[flight_idx].position.x)
-                            y.append(env.flights[flight_idx].position.y)
-                    df = DataFrame( {'id': ids, 'x': x, 'y': y})
-                    kmeans = KMeans(n_clusters = n_cluster).fit(df[['x', 'y']])    
-                    cluster_indexes = [ [] for _ in range(n_cluster)]
-                    # kmeans does not limit the number of points per cluster, so we have to do it ourselfs
-                    for flight_idx in range(env.num_flights):
-                        distance_to_centers = [0] * n_cluster
-                        for idx_center in range(n_cluster):
-                            distance_to_centers[idx_center] = env.flights[flight_idx].position.distance(Point(kmeans.cluster_centers_[idx_center]))
-                        picked_center = 0
-                        while len(cluster_indexes[np.argsort(distance_to_centers)[picked_center]]) >=NUMBER_ACTORS_MARL:
-                            picked_center +=1
-                        cluster_indexes[np.argsort(distance_to_centers)[picked_center]].append(flight_idx)
-                    for cluster_idx in range(n_cluster):            
-                        indexes = np.array(cluster_indexes[cluster_idx])
-                        obs_cluster = np.array(obs)[indexes]
-                        actions_aux = RL.do_step(obs_cluster, episode_name, env.max_speed, env.min_speed)
-                        for index in indexes:
-                            actions[index] = actions_aux.pop()
-                else:
-                    actions  = RL.do_step(obs, episode_name, env.max_speed, env.min_speed)
-            else:
-                for obs_i in obs:
-                    actions = RL.do_step(obs_i, episode_name, env.max_speed, env.min_speed)
 
             # perform step with dummy action
-            obs, rew, done, info = env.step(actions, type(RL) is MADDPG, NUMBER_ACTORS_MARL)
-            obs2 = copy.deepcopy(obs) # obs will get normalized
-            for rew_i in rew:
-                rew_list.append(rew_i)
+            obs, rew, done_t, done_e, info = env.step(actions)
+
             for obs_i in obs:
-                state_list.append(obs_i)
-            
+               RL.normalizeState(obs_i, env.max_speed, env.min_speed)
+
+            if done_t or done_e:
+                done = True
+
+            #for obs_i in obs:
+            #    state_list.append(obs_i)
             tot_rew += rew
             # train the RL model
-            # comment out on testing
-
-            if number_steps_until_done > 0:
-                if type(RL) is MADDPG:
-                    if number_of_aircraft > NUMBER_ACTORS_MARL:
-                        for clusters_idx in range(n_cluster):
-                            indexes = np.array(cluster_indexes[cluster_idx])
-                            obs0_cluster = np.array(obs0)[indexes]
-                            obs_cluster  =  np.array(obs)[indexes]
-                            actions_cluster =  np.array(actions)[indexes]
-                            rew_cluster = sum(rew[indexes])
-                            RL.setResult(episode_name, obs0_cluster, obs_cluster, rew_cluster, actions_cluster, done, env.max_speed, env.min_speed)
-                    else:                    
-                        rew = sum(rew)             
-                        RL.setResult(episode_name, obs0, obs2, rew, actions, done, env.max_speed, env.min_speed)
-                else:
-                    for it_obs in range(len(obs)):
-                        RL.setResult(episode_name, obs0[it_obs], obs2[it_obs], rew[it_obs], actions[it_obs], done, env.max_speed, env.min_speed)
-
+            #for it_obs in range(len(obs)):
+            while len(obs) < len(obs0):
+                obs.append( [0] * 14) # STATE_SIZE = 14
+            RL.setResult(episode_name, obs0, obs, sum(rew), actions, done_e)
+                # print('obs0,',obs0[it_obs],'obs,',obs[it_obs],'done_e,', done_e)
             # comment render out for faster processing
             if e%10 == 0:
                 env.render()
+                #time.sleep(0.01)
             number_steps_until_done += 1
-            number_conflicts += sum(env.conflicts)
-            #time.sleep(0.05)
-
+            number_conflicts += len(env.conflicts)            
+                
         if len(tot_rew_list) < 100:
             tot_rew_list.append(sum(tot_rew)/number_of_aircraft)
             conf_list.append(number_conflicts)
@@ -161,19 +111,23 @@ if __name__ == "__main__":
             tot_rew_list[e%100 -1] = sum(tot_rew)/number_of_aircraft
             conf_list[e%100 -1] = number_conflicts
         # save information
-        #RL.update() # train the model
-        # comment out on testing
-        RL.episode_end(episode_name)
+        # if not test:
+        #     RL.learn() # train the model
+        if e%100 == 0:
+            RL.save_models()
+        #RL.episode_end(episode_name)
+        #np.savetxt('states.csv', state_list)
         tc.dump_pickle(number_steps_until_done, 'results/save/numbersteps_' + episode_name)
         tc.dump_pickle(number_conflicts, 'results/save/numberconflicts_' + episode_name)
-        print('--------------------------------------------------------')
-        print(f' {episode_name} ended in {number_steps_until_done} runs, with {number_conflicts} conflicts.')
-        print(f'Number of aircraft: {number_of_aircraft}')
         print(f'Done aircraft: {len(env.done)}')  
         print(f'Done aircraft IDs: {env.done}')      
 
-        print('conflicts (rolling av100)', np.mean(np.array(conf_list)), 'reward (rolling av100)=', np.mean(np.array(tot_rew_list)))        
-        np.savetxt('rewards.csv', rew_list)
-        np.savetxt('states.csv', state_list)
+        print(episode_name,'ended in', number_steps_until_done, 'runs, with', np.mean(np.array(conf_list)), 'conflicts (rolling av100), reward (rolling av100)=', np.mean(np.array(tot_rew_list)))        
+        #snapshot2 = tracemalloc.take_snapshot()
+        #top_stats = snapshot2.compare_to(snapshot1, 'lineno')
+
+        #print("[ Top 10 differences ]")
+        #for stat in top_stats[:10]:
+        #    print(stat)
         # close rendering
         env.close()

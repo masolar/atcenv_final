@@ -155,8 +155,6 @@ class Environment(gym.Env):
                     f.delayed_action = None
                 
                 it2 +=1
-
-                it2 += 1
         # RDC: here you should implement your resolution actions
         ##########################################################
         return None

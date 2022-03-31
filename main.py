@@ -13,10 +13,8 @@ if __name__ == "__main__":
     import time
     from tqdm import tqdm
 
-    # RL models
-    from atcenv.DDPG.DDPG import DDPG
-    import atcenv.DDPG.TempConfig as tc
-    from atcenv.SAC.sac import SAC
+    # RL model
+    import atcenv.TempConfig as tc
     from atcenv.MASAC.masac_agent import MaSacAgent
     import copy
 

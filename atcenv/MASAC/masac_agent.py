@@ -61,7 +61,7 @@ class MaSacAgent:
     
     def do_step(self, state, max_speed, min_speed, test = False, batch = False):
 
-        if self.total_step < INITIAL_RANDOM_STEPS and not self.is_test:
+        if not test and self.total_step < INITIAL_RANDOM_STEPS and not self.is_test:
             selected_action = np.random.uniform(-1, 1, (len(state), ACTION_DIM))
         else:
             selected_action = []
@@ -149,6 +149,14 @@ class MaSacAgent:
         torch.save(self.qf1.state_dict(), "results/mqf1.pt")
         torch.save(self.qf2.state_dict(), "results/mqf2.pt")
         torch.save(self.vf.state_dict(), "results/mvf.pt")       
+
+    def load_models(self):
+        # The models were trained on a CUDA device
+        # If you are running on a CPU-only machine, use torch.load with map_location=torch.device('cpu') to map your storages to the CPU.
+        self.actor.load_state_dict(torch.load("results/mactor.pt", map_location=torch.device('cpu')))
+        self.qf1.load_state_dict(torch.load("results/mqf1.pt", map_location=torch.device('cpu')))
+        self.qf2.load_state_dict(torch.load("results/mqf2.pt", map_location=torch.device('cpu')))
+        self.vf.load_state_dict(torch.load("results/mvf.pt", map_location=torch.device('cpu')))
     
     def _target_soft_update(self):
         for t_param, l_param in zip(

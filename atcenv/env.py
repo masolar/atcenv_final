@@ -102,9 +102,9 @@ class Environment(gym.Env):
             if i not in self.done:
                 new_track = f.track + action[it2][0] * MAX_BEARING/8
                 f.track = (new_track + u.circle) % u.circle
-                f.airspeed = (action[it2][1]) * (self.max_speed - self.min_speed) + self.min_speed
-                
-                it2 +=1
+                f.airspeed += (action[it2][1]) * (self.max_speed - self.min_speed) /3
+
+                it2 += 1
         # RDC: here you should implement your resolution actions
         ##########################################################
         return None
@@ -118,7 +118,7 @@ class Environment(gym.Env):
         weight_a    = -10 #-10
         weight_b    = 1/5.
         weight_c    = 0
-        weight_d    = 0
+        weight_d    = -0.001
         weight_e    = 0  
         
         conflicts   = self.conflict_penalties() * weight_a
@@ -390,6 +390,9 @@ class Environment(gym.Env):
         # increase steps counter
         self.i += 1
 
+        # store difference from optimal speed
+        self.checkSpeedDif()
+
         # check termination status
         # termination happens when
         # (1) all flights reached the target
@@ -398,6 +401,14 @@ class Environment(gym.Env):
         done_e = (len(self.done) == self.num_flights)
 
         return obs, rew, done_t, done_e, {}
+
+    def checkSpeedDif(self):
+        self.average_speed_dif = 0
+        speed_dif = np.array([])
+        for i, f in enumerate(self.flights):
+            speed_dif = np.append(speed_dif, abs(f.airspeed - f.optimal_airspeed))
+
+        self.average_speed_dif = np.average(speed_dif)
 
     def reset(self, number_flights_training) -> List:
         """

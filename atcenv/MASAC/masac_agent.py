@@ -30,8 +30,14 @@ STDS = [31500,31500,100000,100000,1,1,1,1]
 class MaSacAgent:
     def __init__(self):                
         self.memory = ReplayBuffer(STATE_DIM,ACTION_DIM, BUFFER_SIZE, BATCH_SIZE)
-
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        try:
+            self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+            print('DEVICE USED: ', torch.cuda.device(torch.cuda.current_device()), torch.cuda.get_device_name(0))
+    
+        except:
+            # Cuda isn't available
+            self.device = torch.device("cpu")
+            print('DEVICE USED: CPU')
         
         self.target_alpha = -np.prod((ACTION_DIM,)).item()
         self.log_alpha = torch.zeros(1, requires_grad=True, device=self.device)
@@ -57,8 +63,6 @@ class MaSacAgent:
 
         self.is_test = False
         
-        print('DEVICE USED', torch.cuda.device(torch.cuda.current_device()), torch.cuda.get_device_name(0))
-    
     def do_step(self, state, max_speed, min_speed, test = False, batch = False):
 
         if not test and self.total_step < INITIAL_RANDOM_STEPS and not self.is_test:

@@ -6,7 +6,7 @@ from typing import Dict, List
 from atcenv.definitions import *
 from gym.envs.classic_control import rendering
 from shapely.geometry import LineString
-from .uncertainties import position_scramble, apply_wind
+from .uncertainties import position_scramble, apply_wind, apply_position_delay
 
 import math as m
 # our own packages
@@ -28,6 +28,10 @@ ENABLE_WIND = True
 MINIMUM_WIND_SPEED = 0 # m/s
 MAXIMUM_WIND_SPEED = 30 # m/s
 
+# Delay
+ENABLE_DELAY = True
+MAXIMUM_DELAY = 3 # s
+PROB_DELAY = 0.1
 
 NUMBER_INTRUDERS_STATE = 5
 NUMBER_INTRUDERS_STATE = 2
@@ -100,6 +104,7 @@ class Environment(gym.Env):
         for i, f in enumerate(self.flights):
 
             if i not in self.done:
+                # Get new stuff
                 new_track = f.track + action[it2][0] * MAX_BEARING/8
                 f.track = (new_track + u.circle) % u.circle
                 f.airspeed += (action[it2][1]) * (self.max_speed - self.min_speed) /3
@@ -353,7 +358,12 @@ class Environment(gym.Env):
                 position = f.position
 
                 # get new position and advance one time step
-                f.position._set_coords(position.x + dx * self.dt, position.y + dy * self.dt)
+                if ENABLE_DELAY:
+                    newx, newy = apply_position_delay(f, PROB_DELAY, MAXIMUM_DELAY, self.dt, dx, dy)
+                else:
+                    newx = position.x + dx * self.dt
+                    newy = position.y + dy * self.dt
+                f.position._set_coords(newx, newy)
                 
                 # Scramble the position
                 if ENABLE_POSITION_UNCERTAINTY:
@@ -361,6 +371,10 @@ class Environment(gym.Env):
                                                 0, MAG_POSITION_UNCERTAINTY)
                 else:
                     f.reported_position = f.position
+                    
+                # Store the dx and dy as the previous dx and dy
+                f.prev_dx = dx
+                f.prev_dy = dy
 
     def step(self, action: List,) -> Tuple[List, List, bool, Dict]:
         """

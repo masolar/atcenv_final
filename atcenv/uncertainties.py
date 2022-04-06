@@ -41,3 +41,30 @@ def apply_wind(flight, intensity, track):
     dx, dy = flight.components
     
     return dx + wind_dx, dy + wind_dy
+
+def apply_position_delay(flight, probability, max_delay, dt, dx, dy):
+    # Assert that max_delay is smaller than dt
+    if max_delay > dt:
+        # Problem
+        raise Exception('Maximum delay cannot be greater than dt.')
+    
+    delay_roll = random.random()
+    position = flight.position
+    prev_dx = flight.prev_dx
+    prev_dy = flight.prev_dy
+    
+    if delay_roll >= probability:
+        # Roll failed, return undelayed stuff
+        newx = position.x + dx * dt
+        newy = position.y + dy * dt
+        return newx, newy
+    
+    else:
+        # We delay
+        random_delay = random.random() * max_delay
+        # We travel the previous speed for the delay amount, then
+        # the new speed for the remaining time
+        newx = position.x + (prev_dx * random_delay + dx * (dt - random_delay))
+        newy = position.y + (prev_dy * random_delay + dy * (dt - random_delay))
+        
+        return newx, newy

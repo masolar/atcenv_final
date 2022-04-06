@@ -56,6 +56,9 @@ class Flight:
     airspeed: float = field(init=False)
     track: float = field(init=False)
     
+    prev_dx: float = field(init=False)
+    prev_dy: float = field(init=False)
+    
     reported_position: Point = None
 
     def __post_init__(self) -> None:
@@ -65,6 +68,11 @@ class Flight:
         """
         self.track = self.bearing
         self.airspeed = self.optimal_airspeed
+        
+        # Initialise previous speeds
+        self.prev_dx = self.airspeed * math.sin(self.track)
+        self.prev_dy = self.airspeed * math.cos(self.track)
+        
         # The reported position, not the actual one
         self.reported_position = self.position
         # The action delay still left before 

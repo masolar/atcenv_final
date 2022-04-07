@@ -19,17 +19,17 @@ BLACK = [0, 0, 0]
 RED = [255, 0, 0]
 
 # Position uncertainty vars
-ENABLE_POSITION_UNCERTAINTY = True
+ENABLE_POSITION_UNCERTAINTY = False
 PROB_POSITION_UNCERTAINTY = 0.2
 MAG_POSITION_UNCERTAINTY = 500 # m
 
 # Wind
-ENABLE_WIND = True
+ENABLE_WIND = False
 MINIMUM_WIND_SPEED = 0 # m/s
 MAXIMUM_WIND_SPEED = 30 # m/s
 
 # Delay
-ENABLE_DELAY = True
+ENABLE_DELAY = False
 MAXIMUM_DELAY = 3 # s
 PROB_DELAY = 0.1
 
@@ -108,6 +108,7 @@ class Environment(gym.Env):
                 new_track = f.track + action[it2][0] * MAX_BEARING/8
                 f.track = (new_track + u.circle) % u.circle
                 f.airspeed += (action[it2][1]) * (self.max_speed - self.min_speed) /3
+                f.airspeed = max(min(f.airspeed , self.max_speed), self.min_speed) # limit airspeed to the limits
 
                 it2 += 1
         # RDC: here you should implement your resolution actions

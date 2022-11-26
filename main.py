@@ -104,7 +104,7 @@ if __name__ == "__main__":
             #     env.render()
                 #time.sleep(0.01)
             number_steps_until_done += 1
-            number_conflicts += len(env.conflicts)
+            number_conflicts += sum(env.conflicts.astype(float))
             average_speed_dif = np.average([env.average_speed_dif, average_speed_dif])            
                 
         if len(tot_rew_list) < 100:

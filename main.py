@@ -53,6 +53,11 @@ if __name__ == "__main__":
         Num_Train = "Num_Train_" + str(e)
         step = 0
         memory = deque()
+        obs_memory = []
+        action_memory = []
+        rew_memory = []
+        done_memory = []
+
         episodes = 0
         # update model after 2048 steps
         while episodes < 20:
@@ -71,9 +76,7 @@ if __name__ == "__main__":
             while not done:
                 step += 1
                 total_step += 1
-                actions = RL.do_step(obs, env.max_speed,
-                                     env.min_speed, test=test)
-                print(actions.shape)
+                actions = RL.get_action(obs, test=test)
                 obs0 = copy.deepcopy(obs)
                 # perform step with dummy action
                 obs, rew, done_t, done_e, info = env.step(actions)
@@ -85,10 +88,14 @@ if __name__ == "__main__":
                     break
                 mask = (1 - done) * 1
                 # save transition
-                memory.append([obs0, actions, rew, mask])
+                # Save each planes step as a separate piece of memory
+                for i in range(len(obs0)):
+                    obs_memory.append(obs0[i, :])
+                    rew_memory.append(rew[i])
+                    action_memory.append(actions[i, :])
+                    done_memory.append(mask)
+                #memory.append([obs0, actions, rew, mask])
                 tot_rew += rew
-                while len(obs) < len(obs0):
-                    obs.append([0] * 14)  # STATE_SIZE = 14
                 number_conflicts += sum(env.conflicts.astype(float))
                 average_speed_dif = np.average(
                     [env.average_speed_dif, average_speed_dif])
@@ -96,7 +103,8 @@ if __name__ == "__main__":
             tot_rew_list.append(sum(tot_rew)/number_of_aircraft)
             conf_list.append(number_conflicts)
             speeddif_list.append(average_speed_dif)
-
+            
+            '''
             if total_step % 1000 == 0:
                 clear_output(wait=True)
                 fig, (ax1, ax2, ax3) = plt.subplots(
@@ -122,18 +130,20 @@ if __name__ == "__main__":
                 plt.show(block=False)
                 plt.pause(3)
                 plt.close()
-
+            '''
         if e % 100 == 0 and not test:
             print("Episode:", e, "Saving Model")
             RL.save_models(e)
+        '''
         if e % 10 == 0:
             env.render()
             time.sleep(2)
+        '''
         print(f'Done aircraft: {len(env.done)}')
         print(f'Done aircraft IDs: {env.done}')
         print(Num_Train, 'ended in', step, 'runs, with', np.mean(np.array(conf_list)), 'conflicts (rolling av100), reward (rolling av100)=', np.mean(
             np.array(tot_rew_list)), 'speed dif (rolling av100)', np.mean(np.array(average_speed_dif)))
-        RL.train(memory)
+        RL.train(obs_memory, action_memory, rew_memory, done_memory)
     np.savetxt('./results/data/total_reward.csv',
                np.array(tot_rew_list), delimiter=',')
     np.savetxt('./results/data/conflicts.csv',

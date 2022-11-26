@@ -22,7 +22,7 @@ BUFFER_SIZE = 1000000
 BATCH_SIZE = 32
 
 ACTION_DIM = 2
-STATE_DIM = 14
+STATE_DIM = 15
 NUMBER_INTRUDERS_STATE = 2
 epsilon = 0.2
 MEANS = [57000, 57000, 0, 0, 0, 0, 0, 0]
@@ -49,7 +49,7 @@ class MaSacAgent:
         self.alpha_optimizer = optim.Adam([self.log_alpha], lr=3e-4)
 
         self.actor = Actor(STATE_DIM, ACTION_DIM).to(self.device)
-        self.critic = Critic(STATE_DIM)
+        self.critic = Critic(STATE_DIM).to(self.device)
 
         self.actor_optimizer = optim.Adam(self.actor.parameters(), lr=3e-4)
         self.critic_optimizer = optim.Adam(self.critic.parameters(), lr=3e-4)
@@ -60,29 +60,30 @@ class MaSacAgent:
 
         self.is_test = False
 
-    def do_step(self, state, max_speed, min_speed, test=False, batch=False):
+    def get_action(self, state, test=False, batch=False):
 
         if not test and self.total_step < INITIAL_RANDOM_STEPS and not self.is_test:
             selected_action = np.random.uniform(-1,
                                                 1, (len(state), ACTION_DIM))
         else:
             selected_action = []
-            for i in range(len(state)):
-                action = self.actor(torch.FloatTensor(state[i]).to(self.device))[
+            action = self.actor(torch.FloatTensor(state).to(self.device))[
                     0].detach().cpu().numpy()
-                selected_action.append(action)
-            selected_action = np.array(selected_action)
-            selected_action = np.clip(selected_action, -1, 1)
+            selected_action = np.clip(action, -1, 1)
 
         self.total_step += 1
-        return selected_action.tolist()
+        return selected_action
 
-    def train(self, memory):
-        memory = np.array(memory)
-        states = torch.tensor(list(memory[:, 0]), dtype=torch.float32)
-        actions = torch.tensor(list(memory[:, 1]), dtype=torch.float32)
-        rewards = torch.tensor(list(memory[:, 2]), dtype=torch.float32)
-        masks = torch.tensor(list(memory[:, 3]), dtype=torch.float32)
+    def train(self, obs_memory: List[np.ndarray], action_memory: List[np.ndarray], rew_memory: List[np.ndarray], done_memory: List[bool]):
+        #memory = np.array(memory)
+        states = torch.Tensor(np.stack(obs_memory, 0)).to(self.device)
+        actions = torch.Tensor(np.stack(action_memory, 0)).to(self.device)
+        rewards = torch.Tensor(np.stack(rew_memory, 0)).to(self.device)
+        masks = torch.Tensor(done_memory).to(self.device)
+        #states = torch.tensor(list(memory[:, 0]), dtype=torch.float32)
+        #actions = torch.tensor(list(memory[:, 1]), dtype=torch.float32)
+        #rewards = torch.tensor(list(memory[:, 2]), dtype=torch.float32)
+        #masks = torch.tensor(list(memory[:, 3]), dtype=torch.float32)
         values = self.critic(states)
         values = torch.reshape(values, (-1,))
 
@@ -95,8 +96,8 @@ class MaSacAgent:
             for i in range(n // (BATCH_SIZE)):
                 b_index = arr[BATCH_SIZE * i:BATCH_SIZE * (i + 1)]
                 b_states = states[b_index]
-                b_advants = advants[b_index].unsqueeze(2)
-                b_returns = returns[b_index].unsqueeze(2)
+                b_advants = advants[b_index].unsqueeze(1)
+                b_returns = returns[b_index].unsqueeze(1)
                 actions, log_prob = self.actor(b_states.to(self.device))
                 old_prob = old_log_prob[b_index].detach()
                 ratio = torch.exp(log_prob - old_prob)
@@ -158,38 +159,5 @@ class MaSacAgent:
 
         s_t[:, int_state*5] = ((s_t[:, int_state * 5] - min_speed) / (max_speed - min_speed)) * 2 - 1
         s_t[:, int_state*5 + 1] = ((s_t[:, int_state * 5 + 1] - min_speed) / (max_speed - min_speed)) * 2 - 1
-
-        '''
-        for i in range(0, NUMBER_INTRUDERS_STATE):
-            s_t[i] = (s_t[i]-MEANS[0])/(STDS[0]*2)
-
-        # relative bearing to closest #NUMBER_INTRUDERS_STATE intruders
-        for i in range(NUMBER_INTRUDERS_STATE, NUMBER_INTRUDERS_STATE*2):
-            s_t[i] = (s_t[i]-MEANS[1])/(STDS[1]*2)
-
-        for i in range(NUMBER_INTRUDERS_STATE*2, NUMBER_INTRUDERS_STATE*3):
-            s_t[i] = (s_t[i]-MEANS[2])/(STDS[2]*2)
-
-        for i in range(NUMBER_INTRUDERS_STATE*3, NUMBER_INTRUDERS_STATE*4):
-            s_t[i] = (s_t[i]-MEANS[3])/(STDS[3]*2)
-
-        for i in range(NUMBER_INTRUDERS_STATE*4, NUMBER_INTRUDERS_STATE*5):
-            s_t[i] = (s_t[i])/(3.1415)
-
-        # current bearing
-
-        # current speed
-        s_t[NUMBER_INTRUDERS_STATE *
-            5] = ((s_t[NUMBER_INTRUDERS_STATE*5]-min_speed)/(max_speed-min_speed))*2 - 1
-        # optimal speed
-        s_t[NUMBER_INTRUDERS_STATE*5 +
-            1] = ((s_t[NUMBER_INTRUDERS_STATE*5 + 1]-min_speed)/(max_speed-min_speed))*2 - 1
-        # # distance to target
-        # s_t[NUMBER_INTRUDERS_STATE*2 + 2] = s_t[NUMBER_INTRUDERS_STATE*2 + 2]/MAX_DISTANCE
-        # # bearing to target
-        s_t[NUMBER_INTRUDERS_STATE*5+2] = s_t[NUMBER_INTRUDERS_STATE*5+2]
-        s_t[NUMBER_INTRUDERS_STATE*5+3] = s_t[NUMBER_INTRUDERS_STATE*5+3]
-        '''
-        # s_t[0] = s_t[0]/MAX_BEARING
 
         return s_t

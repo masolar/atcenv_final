@@ -137,12 +137,12 @@ class Environment(gym.Env):
         
         conflicts   = self.conflict_penalties() * weight_a
         drifts      = self.drift_penalties() * weight_b
-        severities  = self.conflict_severity() * weight_c 
+        #severities  = self.conflict_severity() * weight_c 
         speed_dif   = self.speedDifference() * weight_d 
-        target      = self.reachedTarget() * weight_e # can also try to just ouput negative rewards
+        #target      = self.reachedTarget() * weight_e # can also try to just ouput negative rewards
         
-        tot_reward  = conflicts + drifts + severities + speed_dif + target  
-
+        #tot_reward  = conflicts + drifts + severities + speed_dif + target  
+        tot_reward = conflicts + drifts + speed_dif
         return np.squeeze(tot_reward)
 
     def reachedTarget(self):
@@ -257,7 +257,7 @@ class Environment(gym.Env):
         
         return np.expand_dims(severity, 1)
 
-    def observation(self) -> List:
+    def observation(self) -> np.ndarray:
         """
         Returns the observation of each agent
         :return: observation of each agent
@@ -358,14 +358,15 @@ class Environment(gym.Env):
                                         self.flights.airspeed, 
                                         self.flights.optimal_airspeed, 
                                         np.sin(self.flights.drift), 
-                                        np.cos(self.flights.drift)
+                                        np.cos(self.flights.drift),
+                                        self.done
                                         ], 
                                       axis=1)
+        
+        return observations
 
-        valid_observations = observations[np.squeeze((~self.done)), :]
-
-        for i in range(len(valid_observations)):
-            observations_all.append(valid_observations[i, :].tolist())
+        #for i in range(len(valid_observations)):
+        #    observations_all.append(valid_observations[i, :].tolist())
         
         '''
         for i, f in enumerate(self.flights):
@@ -509,16 +510,13 @@ class Environment(gym.Env):
         self.flights.prev_dx = dx
         self.flights.prev_dy = dy
 
-    def step(self, action: List,) -> Tuple[List, List, bool, Dict]:
+    def step(self, action: np.ndarray) -> Tuple[np.ndarray, np.ndarray, bool, bool, Dict]:
         """
         Performs a simulation step
 
         :param action: list of resolution actions assigned to each flight
         :return: observation, reward, done status and other information
         """
-
-        # Convert action to a numpy array
-        action = np.array(action)
 
         # apply resolution actions
         self.resolution(action)

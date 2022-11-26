@@ -89,7 +89,7 @@ class MaSacAgent:
                 b_index = arr[BATCH_SIZE * i:BATCH_SIZE * (i + 1)]
                 b_states = states[b_index]
                 b_advants = advants[b_index].unsqueeze(1)
-                b_returns = returns[b_index].unsqueeze(2)
+                b_returns = returns[b_index].unsqueeze(1)
                 actions, log_prob = self.actor(b_states)
                 old_prob = old_log_prob[b_index].detach()
                 ratio = torch.exp(log_prob - old_prob)
@@ -116,7 +116,6 @@ class MaSacAgent:
         previous_value = 0
         running_advants = 0
         for t in reversed(range(0, len(rewards))):
-            # 计算A_t并进行加权求和
             running_returns = rewards[t] + GAMMMA * running_returns * masks[t]
             running_tderror = rewards[t] + GAMMMA * previous_value * masks[t] - \
                               values.data[t]
@@ -125,7 +124,6 @@ class MaSacAgent:
             returns[t] = running_returns
             previous_value = values.data[t]
             advants[t] = running_advants
-        # advants的归一化
         advants = (advants - advants.mean()) / advants.std()
         return returns, advants
     

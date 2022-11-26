@@ -437,6 +437,7 @@ class Environment(gym.Env):
 
         self.conflicts = distances < self.min_distance
         
+        np.fill_diagonal(self.conflicts, False)
         '''
         # reset set
         self.conflicts = set()

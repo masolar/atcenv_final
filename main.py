@@ -3,6 +3,8 @@ Example
 """
 
 import numpy as np
+from collections import deque
+import matplotlib.pyplot as plt
 import tracemalloc
 
 if __name__ == "__main__":
@@ -15,16 +17,15 @@ if __name__ == "__main__":
 
     # RL model
     import atcenv.TempConfig as tc
-    from atcenv.MASAC.masac_agent import MaSacAgent
+    from atcenv.MASAC.ppo import MaSacAgent
     import copy
-
     parser = ArgumentParser(
         prog='Conflict resolution environment',
         description='Basic conflict resolution environment for training policies with reinforcement learning',
         print_config='--print_config',
         parser_mode='yaml'
     )
-    parser.add_argument('--episodes', type=int, default=10000)
+    parser.add_argument('--episodes', type=int, default=1000)
     parser.add_argument('--config', action=ActionConfigFile)
     parser.add_class_arguments(Environment, 'env')
 
@@ -44,69 +45,84 @@ if __name__ == "__main__":
     if load_models:
         RL.load_models()
     # increase number of flights
-    tot_rew_list = []
     conf_list = []
     speeddif_list = []
     # run episodes
     state_list = []
-    for e in tqdm(range(args.episodes)):   
-        print('\n-----------------------------------------------------')
-        #snapshot1 = tracemalloc.take_snapshot()     
-        episode_name = "EPISODE_" + str(e) 
+    episodes = 0
+    avg_rewards = []
+    show_episodes = []
 
-        # reset environment
-        # train with an increasing number of aircraft
-        number_of_aircraft = 10 #min(int(e/500)+5,10)
-        obs = env.reset(number_of_aircraft)
-        for obs_i in obs:
-            RL.normalizeState(obs_i, env.max_speed, env.min_speed)
-        # set done status to false
-        done = False
-
-        # save how many steps it took for this episode to finish
-        number_steps_until_done = 0
-        # save how many conflics happened in eacj episode
-        number_conflicts = 0
-        # save different from optimal speed
-        average_speed_dif = 0
-
-        tot_rew = 0
-        # execute one episode
-        while not done:
-            #for obs_i in obs:
-            # print(obs_i)
-            actions = RL.do_step(obs,env.max_speed, env.min_speed, test=test)
-                # actions.append((np.random.rand(2)-0.5)*2)
-                #actions.append([0,0])
-
-            obs0 = copy.deepcopy(obs)
-
-            # perform step with dummy action
-            obs, rew, done_t, done_e, info = env.step(actions)
-
+    # beginning of the algorithm
+    for e in tqdm(range(args.episodes)):
+        episode_name = "EPISODE_" + str(e)
+        step = 0
+        memory = deque()
+        tot_rew_list = []
+        while step < 2048:
+            episodes += 1
+            number_of_aircraft = 10  # min(int(e/500)+5,10)
+            obs = env.reset(number_of_aircraft)
             for obs_i in obs:
-               RL.normalizeState(obs_i, env.max_speed, env.min_speed)
+                RL.normalizeState(obs_i, env.max_speed, env.min_speed)
+            done = False
+            number_steps_until_done = 0
+            # save how many conflics happened in eacj episode
+            number_conflicts = 0
+            # save different from optimal speed
+            average_speed_dif = 0
 
-            if done_t or done_e:
-                done = True
+            tot_rew = 0
+            for _ in range(10000):
+                #for obs_i in obs:
+                # print(obs_i)
+                step += 1
+                actions = RL.do_step(obs, env.max_speed, env.min_speed, test=test)
+                    # actions.append((np.random.rand(2)-0.5)*2)
+                    #actions.append([0,0])
 
-            #for obs_i in obs:
-            #    state_list.append(obs_i)
-            tot_rew += rew
-            # train the RL model
-            #for it_obs in range(len(obs)):
-            while len(obs) < len(obs0):
-                obs.append( [0] * 14) # STATE_SIZE = 14
-            RL.setResult(episode_name, obs0, obs, sum(rew), actions, done_e)
-                # print('obs0,',obs0[it_obs],'obs,',obs[it_obs],'done_e,', done_e)
-            # comment render out for faster processing
-            # if e%10 == 0:
-            #     env.render()
-                #time.sleep(0.01)
-            number_steps_until_done += 1
-            number_conflicts += len(env.conflicts)
-            average_speed_dif = np.average([env.average_speed_dif, average_speed_dif])            
-                
+                obs0 = copy.deepcopy(obs)
+
+                # perform step with dummy action
+                obs, rew, done_t, done_e, info = env.step(actions)
+
+                for obs_i in obs:
+                   RL.normalizeState(obs_i, env.max_speed, env.min_speed)
+
+                if done_t or done_e:
+                    print(len(memory))
+                    done = True
+                    break
+                mask = (1 - done) * 1
+                memory.append([obs0, actions, rew, mask]) # rollout
+
+                tot_rew += rew
+
+                while len(obs) < len(obs0):
+                    obs.append( [0] * 14) # STATE_SIZE = 14
+                # RL.setResult(episode_name, obs0, obs, sum(rew), actions, done_e)
+                    # print('obs0,',obs0[it_obs],'obs,',obs[it_obs],'done_e,', done_e)
+                # comment render out for faster processing
+                # if e%10 == 0:
+                #     env.render()
+                    #time.sleep(0.01)
+                number_steps_until_done += 1
+                number_conflicts += len(env.conflicts)
+                average_speed_dif = np.average([env.average_speed_dif, average_speed_dif])
+            tot_rew_list.append(tot_rew)
+            if step >= 2048:
+                show_episodes.append(episodes)
+                rew_avg = np.mean(tot_rew_list)
+                avg_rewards.append(rew_avg)
+                plt.clf()
+                plt.xlabel('Episodes')
+                plt.ylabel('Rewards')
+                plt.plot(show_episodes, avg_rewards, color='skyblue', label='Current')
+                # plt.plot(self.avg_rewards, color='red', label='Average')
+                plt.legend()
+                # plt.savefig('Train.jpg')
+                plt.show()
+                plt.pause(0.001)
         if len(tot_rew_list) < 100:
             tot_rew_list.append(sum(tot_rew)/number_of_aircraft)
             conf_list.append(number_conflicts)
@@ -118,8 +134,8 @@ if __name__ == "__main__":
         # save information
         # if not test:
         #     RL.learn() # train the model
-        if e%100 == 0 and not test:
-            RL.save_models()
+        # if e%100 == 0 and not test:
+        #     RL.save_models()
         #RL.episode_end(episode_name)
         #np.savetxt('states.csv', state_list)
         tc.dump_pickle(number_steps_until_done, 'results/save/numbersteps_' + episode_name)
@@ -136,4 +152,5 @@ if __name__ == "__main__":
         #for stat in top_stats[:10]:
         #    print(stat)
         # close rendering
-        env.close()
+        # env.close()
+        RL.train(memory)

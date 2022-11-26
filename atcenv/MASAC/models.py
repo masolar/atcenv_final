@@ -55,7 +55,7 @@ class Actor(nn.Module):
         return action, log_prob
 
 
-class CriticQ(nn.Module):
+class Critic(nn.Module):
     def __init__(
         self,
         in_dim: int,
@@ -69,34 +69,32 @@ class CriticQ(nn.Module):
         self.out = init_layer_uniform(self.out)
 
     def forward(
-        self, 
-        state:torch.Tensor, 
-        action: torch.Tensor) -> torch.Tensor:
-        x = torch.cat((state, action), dim=-1)
-        x = F.relu(self.hidden1(x))
-        x = F.relu(self.hidden2(x))
-        value = self.out(x)
-
-        return value
-
-class CriticV(nn.Module):
-    def __init__(
         self,
-        in_dim: int,
-        hidden_dim1: int=256,
-        hidden_dim2: int=256):
-        super().__init__()
-
-        self.hidden1 = nn.Linear(in_dim, hidden_dim1)
-        self.hidden2 = nn.Linear(hidden_dim1, hidden_dim2)
-        self.out = nn.Linear(hidden_dim2, 1)
-        self.out = init_layer_uniform(self.out)
-
-    def forward(
-        self, 
-        state: torch.Tensor) -> torch.Tensor:
+        state:torch.Tensor) -> torch.Tensor:
         x = F.relu(self.hidden1(state))
         x = F.relu(self.hidden2(x))
         value = self.out(x)
 
         return value
+
+# class CriticV(nn.Module):
+#     def __init__(
+#         self,
+#         in_dim: int,
+#         hidden_dim1: int=256,
+#         hidden_dim2: int=256):
+#         super().__init__()
+#
+#         self.hidden1 = nn.Linear(in_dim, hidden_dim1)
+#         self.hidden2 = nn.Linear(hidden_dim1, hidden_dim2)
+#         self.out = nn.Linear(hidden_dim2, 1)
+#         self.out = init_layer_uniform(self.out)
+#
+#     def forward(
+#         self,
+#         state: torch.Tensor) -> torch.Tensor:
+#         x = F.relu(self.hidden1(state))
+#         x = F.relu(self.hidden2(x))
+#         value = self.out(x)
+#
+#         return value

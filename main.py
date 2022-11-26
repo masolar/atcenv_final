@@ -5,6 +5,7 @@ Example
 import numpy as np
 from collections import deque
 import matplotlib.pyplot as plt
+from IPython.display import clear_output
 import tracemalloc
 
 if __name__ == "__main__":
@@ -47,110 +48,86 @@ if __name__ == "__main__":
     # increase number of flights
     conf_list = []
     speeddif_list = []
-    # run episodes
-    state_list = []
-    episodes = 0
-    avg_rewards = []
-    show_episodes = []
-
+    tot_rew_list = []
+    total_step =0
     # beginning of the algorithm
     for e in tqdm(range(args.episodes)):
-        episode_name = "EPISODE_" + str(e)
+        Num_Train = "Num_Train_" + str(e)
         step = 0
         memory = deque()
-        tot_rew_list = []
-        while step < 2048:
+        episodes = 0
+        # update model after 2048 steps
+        while episodes < 2048:
             episodes += 1
             number_of_aircraft = 10  # min(int(e/500)+5,10)
             obs = env.reset(number_of_aircraft)
             for obs_i in obs:
                 RL.normalizeState(obs_i, env.max_speed, env.min_speed)
             done = False
-            number_steps_until_done = 0
             # save how many conflics happened in eacj episode
             number_conflicts = 0
             # save different from optimal speed
             average_speed_dif = 0
-
             tot_rew = 0
-            for _ in range(10000):
-                #for obs_i in obs:
-                # print(obs_i)
+            # start sampling trajactories
+            while not done:
                 step += 1
+                total_step += 1
                 actions = RL.do_step(obs, env.max_speed, env.min_speed, test=test)
-                    # actions.append((np.random.rand(2)-0.5)*2)
-                    #actions.append([0,0])
-
                 obs0 = copy.deepcopy(obs)
-
                 # perform step with dummy action
                 obs, rew, done_t, done_e, info = env.step(actions)
-
                 for obs_i in obs:
                    RL.normalizeState(obs_i, env.max_speed, env.min_speed)
-
                 if done_t or done_e:
                     print(len(memory))
                     done = True
                     break
                 mask = (1 - done) * 1
-                memory.append([obs0, actions, rew, mask]) # rollout
-
+                # save transition
+                memory.append([obs0, actions, rew, mask])
                 tot_rew += rew
-
                 while len(obs) < len(obs0):
                     obs.append( [0] * 14) # STATE_SIZE = 14
-                # RL.setResult(episode_name, obs0, obs, sum(rew), actions, done_e)
-                    # print('obs0,',obs0[it_obs],'obs,',obs[it_obs],'done_e,', done_e)
-                # comment render out for faster processing
-                # if e%10 == 0:
-                #     env.render()
-                    #time.sleep(0.01)
-                number_steps_until_done += 1
                 number_conflicts += len(env.conflicts)
                 average_speed_dif = np.average([env.average_speed_dif, average_speed_dif])
-            tot_rew_list.append(tot_rew)
-            if step >= 2048:
-                show_episodes.append(episodes)
-                rew_avg = np.mean(tot_rew_list)
-                avg_rewards.append(rew_avg)
-                plt.clf()
-                plt.xlabel('Episodes')
-                plt.ylabel('Rewards')
-                plt.plot(show_episodes, avg_rewards, color='skyblue', label='Current')
-                # plt.plot(self.avg_rewards, color='red', label='Average')
-                plt.legend()
-                # plt.savefig('Train.jpg')
-                plt.show()
-                plt.pause(0.001)
-        if len(tot_rew_list) < 100:
+            # in one episode, the average total reward of every plane
             tot_rew_list.append(sum(tot_rew)/number_of_aircraft)
             conf_list.append(number_conflicts)
             speeddif_list.append(average_speed_dif)
-        else:
-            tot_rew_list[e%100 -1] = sum(tot_rew)/number_of_aircraft
-            conf_list[e%100 -1] = number_conflicts
-            speeddif_list[e%100 -1] = average_speed_dif
-        # save information
-        # if not test:
-        #     RL.learn() # train the model
-        # if e%100 == 0 and not test:
-        #     RL.save_models()
-        #RL.episode_end(episode_name)
-        #np.savetxt('states.csv', state_list)
-        tc.dump_pickle(number_steps_until_done, 'results/save/numbersteps_' + episode_name)
-        tc.dump_pickle(number_conflicts, 'results/save/numberconflicts_' + episode_name)
-        tc.dump_pickle(average_speed_dif, 'results/save/speeddif_' + episode_name)
+
+            if total_step % 1000 == 0:
+                clear_output(wait=True)
+                fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(15, 4), dpi=100)
+                ax1.plot(tot_rew_list)
+                ax1.set_xlabel('Episode')
+                ax1.set_ylabel('Total Reward')
+                ax1.set_title('Average Total Rewards of Planes')
+                ax1.grid()
+
+                ax2.plot(conf_list)
+                ax2.set_xlabel('Episode')
+                ax2.set_ylabel('Conflicts')
+                ax2.set_title('Conflicts Per Episode')
+                ax2.grid()
+
+                ax3.plot(speeddif_list)
+                ax3.set_xlabel('Episode')
+                ax3.set_ylabel('Average Speed Difference')
+                ax3.set_title('Average Speed Dif Per Episode')
+                ax3.grid()
+
+                plt.show()
+
+        if e%100 == 0 and not test:
+            RL.save_models(e)
+        if e % 10 == 0:
+            env.render()
+            time.sleep(0.01)
         print(f'Done aircraft: {len(env.done)}')  
-        print(f'Done aircraft IDs: {env.done}')      
-
-        print(episode_name,'ended in', number_steps_until_done, 'runs, with', np.mean(np.array(conf_list)), 'conflicts (rolling av100), reward (rolling av100)=', np.mean(np.array(tot_rew_list)), 'speed dif (rolling av100)', np.mean(np.array(average_speed_dif)))        
-        #snapshot2 = tracemalloc.take_snapshot()
-        #top_stats = snapshot2.compare_to(snapshot1, 'lineno')
-
-        #print("[ Top 10 differences ]")
-        #for stat in top_stats[:10]:
-        #    print(stat)
-        # close rendering
-        # env.close()
+        print(f'Done aircraft IDs: {env.done}')
+        print(Num_Train,'ended in', step, 'runs, with', np.mean(np.array(conf_list)), 'conflicts (rolling av100), reward (rolling av100)=', np.mean(np.array(tot_rew_list)), 'speed dif (rolling av100)', np.mean(np.array(average_speed_dif)))
         RL.train(memory)
+        np.savetxt('./results/data/total_reward.csv', np.array(tot_rew_list), delimiter=',')
+        np.savetxt('./results/data/conflicts.csv', np.array(conf_list), delimiter=',')
+        np.savetxt('./results/data/speed_dif.csv', np.array(speeddif_list), delimiter=',')

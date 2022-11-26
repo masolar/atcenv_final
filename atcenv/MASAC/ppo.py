@@ -71,7 +71,7 @@ class MaSacAgent:
 
 
     def train(self, memory):
-        memory = np.array(memory)
+        memory = np.array(memory, dtype=torch.float32)
         states = torch.tensor(list(memory[:, 0]), dtype=torch.float32)
         actions = torch.tensor(list(memory[:, 1]), dtype=torch.float32)
         rewards = torch.tensor(list(memory[:, 2]), dtype=torch.float32)
@@ -89,8 +89,7 @@ class MaSacAgent:
                 b_index = arr[BATCH_SIZE * i:BATCH_SIZE * (i + 1)]
                 b_states = states[b_index]
                 b_advants = advants[b_index].unsqueeze(1)
-                # b_actions = actions[b_index]
-                b_returns = returns[b_index].unsqueeze(1)
+                b_returns = returns[b_index].unsqueeze(2)
                 actions, log_prob = self.actor(b_states)
                 old_prob = old_log_prob[b_index].detach()
                 ratio = torch.exp(log_prob - old_prob)
@@ -130,15 +129,15 @@ class MaSacAgent:
         advants = (advants - advants.mean()) / advants.std()
         return returns, advants
     
-    def save_models(self):
-        torch.save(self.actor.state_dict(), "results/actor.pt")
-        torch.save(self.critic.state_dict(), "results/critic.pt")
+    def save_models(self, e):
+        torch.save(self.actor.state_dict(), "results/models/actor"+str(e)+".pt")
+        torch.save(self.critic.state_dict(), "results/models/critic"+str(e)+".pt")
 
-    def load_models(self):
+    def load_models(self, e):
         # The models were trained on a CUDA device
         # If you are running on a CPU-only machine, use torch.load with map_location=torch.device('cpu') to map your storages to the CPU.
-        self.actor.load_state_dict(torch.load("results/actor.pt", map_location=torch.device('cpu')))
-        self.critic.load_state_dict(torch.load("results/critic.pt", map_location=torch.device('cpu')))
+        self.actor.load_state_dict(torch.load("results/models/actor"+str(e)+".pt", map_location=torch.device('cpu')))
+        self.critic.load_state_dict(torch.load("results/models/critic"+str(e)+".pt", map_location=torch.device('cpu')))
 
 
     def normalizeState(self, s_t, max_speed, min_speed):

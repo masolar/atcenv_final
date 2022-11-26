@@ -149,6 +149,17 @@ class MaSacAgent:
 
     def normalizeState(self, s_t, max_speed, min_speed):
         # distance to closest #NUMBER_INTRUDERS_STATE intruders
+        int_state = NUMBER_INTRUDERS_STATE
+        s_t[:, int_state*0:int_state*1] = (s_t[:, int_state*0:int_state*1] - MEANS[0]) / (STDS[0] * 2)
+        s_t[:, int_state*1:int_state*2] = (s_t[:, int_state*1:int_state*2] - MEANS[1]) / (STDS[1] * 2)
+        s_t[:, int_state*2:int_state*3] = (s_t[:, int_state*2:int_state*3] - MEANS[2]) / (STDS[2] * 2)
+        s_t[:, int_state*3:int_state*4] = (s_t[:, int_state*3:int_state*4] - MEANS[3]) / (STDS[3] * 2)
+        s_t[:, int_state*4:int_state*5] = s_t[:, int_state*4:int_state*5] / 3.1415
+
+        s_t[:, int_state*5] = ((s_t[:, int_state * 5] - min_speed) / (max_speed - min_speed)) * 2 - 1
+        s_t[:, int_state*5 + 1] = ((s_t[:, int_state * 5 + 1] - min_speed) / (max_speed - min_speed)) * 2 - 1
+
+        '''
         for i in range(0, NUMBER_INTRUDERS_STATE):
             s_t[i] = (s_t[i]-MEANS[0])/(STDS[0]*2)
 
@@ -178,7 +189,7 @@ class MaSacAgent:
         # # bearing to target
         s_t[NUMBER_INTRUDERS_STATE*5+2] = s_t[NUMBER_INTRUDERS_STATE*5+2]
         s_t[NUMBER_INTRUDERS_STATE*5+3] = s_t[NUMBER_INTRUDERS_STATE*5+3]
-
+        '''
         # s_t[0] = s_t[0]/MAX_BEARING
 
         return s_t

@@ -5,8 +5,6 @@ Example
 import numpy as np
 from collections import deque
 import matplotlib.pyplot as plt
-from IPython.display import clear_output
-import tracemalloc
 
 if __name__ == "__main__":
     import random
@@ -61,8 +59,8 @@ if __name__ == "__main__":
             episodes += 1
             number_of_aircraft = 10  # min(int(e/500)+5,10)
             obs = env.reset(number_of_aircraft)
-            for obs_i in obs:
-                RL.normalizeState(obs_i, env.max_speed, env.min_speed)
+            #for obs_i in obs:
+            RL.normalizeState(obs, env.max_speed, env.min_speed)
             done = False
             # save how many conflics happened in eacj episode
             number_conflicts = 0
@@ -75,11 +73,12 @@ if __name__ == "__main__":
                 total_step += 1
                 actions = RL.do_step(obs, env.max_speed,
                                      env.min_speed, test=test)
+                print(actions.shape)
                 obs0 = copy.deepcopy(obs)
                 # perform step with dummy action
                 obs, rew, done_t, done_e, info = env.step(actions)
-                for obs_i in obs:
-                    RL.normalizeState(obs_i, env.max_speed, env.min_speed)
+                #for obs_i in obs:
+                RL.normalizeState(obs, env.max_speed, env.min_speed)
                 if done_t or done_e:
                     # print(len(memory))
                     done = True

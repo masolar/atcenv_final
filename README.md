@@ -5,8 +5,8 @@
 The environment has been tested with Python 3.8 and the versions specified in the requirements.txt file
 
 ### Extra stuff
-Do it trust me, it will run
-```
+Do it trust me. 
+``` bash
 pip install ipython
 ```
 
@@ -15,7 +15,11 @@ cd atcenv
 pip install -r requirements.txt
 python setup.py install
 ```
+## Run the code 
 
+```bash 
+python main.py
+```
 ## Usage
 
 ```python

@@ -176,9 +176,14 @@ class FlightCollection:
     A collection of flights for vectorization
     '''
     def __init__(self, flights: List[Flight]):
-        self.position = np.stack([np.array([f.position.x, f.position.y], dtype=np.float64) for f in flights])
-        self.target = np.stack([np.array([f.target.x, f.target.y], dtype=np.float64) for f in flights])
-        self.optimal_airspeed = np.array([f.optimal_airspeed for f in flights], dtype=np.float64)
+        if len(flights) > 0:
+            self.position = np.stack([np.array([f.position.x, f.position.y], dtype=np.float64) for f in flights])
+            self.target = np.stack([np.array([f.target.x, f.target.y], dtype=np.float64) for f in flights])
+            self.optimal_airspeed = np.expand_dims(np.array([f.optimal_airspeed for f in flights], dtype=np.float64), 1)
+        else: # Removes type errors
+            self.position = np.array([[0, 0]])
+            self.target = np.array([[0, 0]])
+            self.optimal_airspeed = np.array([[0]])
         
         self.reported_position = self.position
         
@@ -206,7 +211,7 @@ class FlightCollection:
             dx = self.target[:, 0] - self.position[:, 0]
             dy = self.target[:, 1] - self.position[:, 1]
 
-        compass = np.arctan2(dx, dy)
+        compass = np.expand_dims(np.arctan2(dx, dy), 1)
         return (compass + u.circle) % u.circle
     
     @property
@@ -218,10 +223,10 @@ class FlightCollection:
         """
         dx, dy = self.components
         
-        x_pred = self.reported_position[:, 0] + dx * dt
-        y_pred = self.reported_position[:, 1] + dy * dt
+        x_pred = np.expand_dims(self.reported_position[:, 0], 1) + dx * dt
+        y_pred = np.expand_dims(self.reported_position[:, 1], 1) + dy * dt
 
-        return np.stack([x_pred, y_pred], axis=1)
+        return np.concatenate([x_pred, y_pred], axis=1)
 
     @property
     def components(self) -> Tuple[np.ndarray, np.ndarray]:
@@ -233,6 +238,25 @@ class FlightCollection:
         dy = self.airspeed * np.cos(self.track)
 
         return dx, dy
+    
+    @property
+    def distance_all(self) -> np.ndarray:
+        x_pos = np.expand_dims(self.position[:, 0], 1)
+        y_pos = np.expand_dims(self.position[:, 1], 1)
+
+        dist_mat = np.sqrt(np.square(x_pos - x_pos.T) + np.square(y_pos - y_pos.T))
+
+        return dist_mat
+
+    @property
+    def predict_distance_all(self) -> np.ndarray:
+        pred = self.prediction
+        x_pos = np.expand_dims(pred[:, 0], 1)
+        y_pos = np.expand_dims(pred[:, 1], 1)
+
+        dist_mat = np.sqrt(np.square(x_pos - x_pos.T) + np.square(y_pos - y_pos.T))
+
+        return dist_mat
 
     @property
     def distance(self) -> np.ndarray:
@@ -252,9 +276,7 @@ class FlightCollection:
         
         return_array = np.copy(drift)
         
-        if len(return_array[drift > math.pi]) > 0:
-            return_array[drift > math.pi] = -(u.circle - drift)
-        if len(return_array[drift < -math.pi]) > 0:
-            return_array[drift < -math.pi] = u.circle + drift
+        np.putmask(return_array, drift > math.pi, -(u.circle - drift))
+        np.putmask(return_array, drift < -math.pi, u.circle + drift)
         
         return return_array

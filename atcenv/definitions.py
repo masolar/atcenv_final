@@ -6,8 +6,8 @@ from dataclasses import dataclass, field
 import atcenv.units as u
 import math
 import random
-from typing import Optional, Tuple
-
+import numpy as np
+from typing import Optional, Tuple, List
 
 @dataclass
 class Airspace:
@@ -171,4 +171,112 @@ class Flight:
 
         return cls(position, target, airspeed)
 
+class FlightCollection:
+    '''
+    A collection of flights for vectorization
+    '''
+    def __init__(self, flights: List[Flight]):
+        if len(flights) > 0:
+            self.position = np.stack([np.array([f.position.x, f.position.y], dtype=np.float64) for f in flights])
+            self.target = np.stack([np.array([f.target.x, f.target.y], dtype=np.float64) for f in flights])
+            self.optimal_airspeed = np.expand_dims(np.array([f.optimal_airspeed for f in flights], dtype=np.float64), 1)
+        else: # Removes type errors
+            self.position = np.array([[0, 0]])
+            self.target = np.array([[0, 0]])
+            self.optimal_airspeed = np.array([[0]])
+        
+        self.reported_position = self.position
+        
+        self.track = self.bearing
+        self.airspeed = self.optimal_airspeed
+        
+        # Initialise previous speeds
+        self.prev_dx = self.airspeed * np.sin(self.track)
+        self.prev_dy = self.airspeed * np.cos(self.track)
+        
+        # The action delay still left before 
+        self.action_delay = -999
+        self.delayed_action = None
 
+    @property
+    def bearing(self) -> np.ndarray:
+        """
+        Bearing from current position to target
+        :return:
+        """
+        if self.reported_position is not None:
+            dx = self.target[:, 0] - self.reported_position[:, 0]
+            dy = self.target[:, 1] - self.reported_position[:, 1]
+        else:
+            dx = self.target[:, 0] - self.position[:, 0]
+            dy = self.target[:, 1] - self.position[:, 1]
+
+        compass = np.expand_dims(np.arctan2(dx, dy), 1)
+        return (compass + u.circle) % u.circle
+    
+    @property
+    def prediction(self, dt: Optional[float] = 20) -> np.ndarray:
+        """
+        Predicts the future position after dt seconds, maintaining the current speed and track
+        :param dt: prediction look-ahead time (in seconds)
+        :return:
+        """
+        dx, dy = self.components
+        
+        x_pred = np.expand_dims(self.reported_position[:, 0], 1) + dx * dt
+        y_pred = np.expand_dims(self.reported_position[:, 1], 1) + dy * dt
+
+        return np.concatenate([x_pred, y_pred], axis=1)
+
+    @property
+    def components(self) -> Tuple[np.ndarray, np.ndarray]:
+        """
+        X and Y Speed components (in kt)
+        :return: speed components
+        """
+        dx = self.airspeed * np.sin(self.track)
+        dy = self.airspeed * np.cos(self.track)
+
+        return dx, dy
+    
+    @property
+    def distance_all(self) -> np.ndarray:
+        x_pos = np.expand_dims(self.position[:, 0], 1)
+        y_pos = np.expand_dims(self.position[:, 1], 1)
+
+        dist_mat = np.sqrt(np.square(x_pos - x_pos.T) + np.square(y_pos - y_pos.T))
+
+        return dist_mat
+
+    @property
+    def predict_distance_all(self) -> np.ndarray:
+        pred = self.prediction
+        x_pos = np.expand_dims(pred[:, 0], 1)
+        y_pos = np.expand_dims(pred[:, 1], 1)
+
+        dist_mat = np.sqrt(np.square(x_pos - x_pos.T) + np.square(y_pos - y_pos.T))
+
+        return dist_mat
+
+    @property
+    def distance(self) -> np.ndarray:
+        """
+        Current distance to the target (in meters)
+        :return: distance to the target
+        """
+        return np.sqrt(np.sum(np.square(self.reported_position - self.target), axis=1))
+
+    @property
+    def drift(self) -> np.ndarray:
+        """
+        Drift angle (difference between track and bearing) to the target
+        :return:
+        """
+        drift = self.bearing - self.track
+        
+        return_array = np.copy(drift)
+        
+        np.putmask(return_array, drift > math.pi, -(u.circle - drift))
+        np.putmask(return_array, drift < -math.pi, u.circle + drift)
+        
+        return return_array

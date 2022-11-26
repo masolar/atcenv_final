@@ -26,7 +26,7 @@ if __name__ == "__main__":
         print_config='--print_config',
         parser_mode='yaml'
     )
-    parser.add_argument('--episodes', type=int, default=1000)
+    parser.add_argument('--episodes', type=int, default=100)
     parser.add_argument('--config', action=ActionConfigFile)
     parser.add_class_arguments(Environment, 'env')
 
@@ -51,13 +51,13 @@ if __name__ == "__main__":
     tot_rew_list = []
     total_step =0
     # beginning of the algorithm
-    for e in tqdm(range(args.episodes)):
+    for e in tqdm(range(100)):
         Num_Train = "Num_Train_" + str(e)
         step = 0
         memory = deque()
         episodes = 0
         # update model after 2048 steps
-        while episodes < 2048:
+        while episodes < 20:
             episodes += 1
             number_of_aircraft = 10  # min(int(e/500)+5,10)
             obs = env.reset(number_of_aircraft)
@@ -123,7 +123,7 @@ if __name__ == "__main__":
             RL.save_models(e)
         if e % 10 == 0:
             env.render()
-            time.sleep(0.01)
+            time.sleep(2)
         print(f'Done aircraft: {len(env.done)}')  
         print(f'Done aircraft IDs: {env.done}')
         print(Num_Train,'ended in', step, 'runs, with', np.mean(np.array(conf_list)), 'conflicts (rolling av100), reward (rolling av100)=', np.mean(np.array(tot_rew_list)), 'speed dif (rolling av100)', np.mean(np.array(average_speed_dif)))

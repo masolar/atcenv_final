@@ -71,7 +71,7 @@ class MaSacAgent:
 
 
     def train(self, memory):
-        memory = np.array(memory, dtype=torch.float32)
+        memory = np.array(memory)
         states = torch.tensor(list(memory[:, 0]), dtype=torch.float32)
         actions = torch.tensor(list(memory[:, 1]), dtype=torch.float32)
         rewards = torch.tensor(list(memory[:, 2]), dtype=torch.float32)

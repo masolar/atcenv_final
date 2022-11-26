@@ -95,8 +95,8 @@ class MaSacAgent:
             for i in range(n // (BATCH_SIZE)):
                 b_index = arr[BATCH_SIZE * i:BATCH_SIZE * (i + 1)]
                 b_states = states[b_index]
-                b_advants = advants[b_index].unsqueeze(1)
-                b_returns = returns[b_index].unsqueeze(1)
+                b_advants = advants[b_index].unsqueeze(2)
+                b_returns = returns[b_index].unsqueeze(2)
                 actions, log_prob = self.actor(b_states.to(self.device))
                 old_prob = old_log_prob[b_index].detach()
                 ratio = torch.exp(log_prob - old_prob)

@@ -32,7 +32,7 @@ if __name__ == "__main__":
 
     # parse arguments
     args = parser.parse_args()
-    #tracemalloc.start()
+    # tracemalloc.start()
 
     # init environment
     env = Environment(**vars(args.env))
@@ -49,7 +49,7 @@ if __name__ == "__main__":
     conf_list = []
     speeddif_list = []
     tot_rew_list = []
-    total_step =0
+    total_step = 0
     # beginning of the algorithm
     for e in tqdm(range(100)):
         Num_Train = "Num_Train_" + str(e)
@@ -73,14 +73,15 @@ if __name__ == "__main__":
             while not done:
                 step += 1
                 total_step += 1
-                actions = RL.do_step(obs, env.max_speed, env.min_speed, test=test)
+                actions = RL.do_step(obs, env.max_speed,
+                                     env.min_speed, test=test)
                 obs0 = copy.deepcopy(obs)
                 # perform step with dummy action
                 obs, rew, done_t, done_e, info = env.step(actions)
                 for obs_i in obs:
-                   RL.normalizeState(obs_i, env.max_speed, env.min_speed)
+                    RL.normalizeState(obs_i, env.max_speed, env.min_speed)
                 if done_t or done_e:
-                    print(len(memory))
+                    # print(len(memory))
                     done = True
                     break
                 mask = (1 - done) * 1
@@ -88,9 +89,10 @@ if __name__ == "__main__":
                 memory.append([obs0, actions, rew, mask])
                 tot_rew += rew
                 while len(obs) < len(obs0):
-                    obs.append( [0] * 14) # STATE_SIZE = 14
+                    obs.append([0] * 14)  # STATE_SIZE = 14
                 number_conflicts += len(env.conflicts)
-                average_speed_dif = np.average([env.average_speed_dif, average_speed_dif])
+                average_speed_dif = np.average(
+                    [env.average_speed_dif, average_speed_dif])
             # in one episode, the average total reward of every plane
             tot_rew_list.append(sum(tot_rew)/number_of_aircraft)
             conf_list.append(number_conflicts)
@@ -98,7 +100,8 @@ if __name__ == "__main__":
 
             if total_step % 1000 == 0:
                 clear_output(wait=True)
-                fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(15, 4), dpi=100)
+                fig, (ax1, ax2, ax3) = plt.subplots(
+                    1, 3, figsize=(15, 4), dpi=100)
                 ax1.plot(tot_rew_list)
                 ax1.set_xlabel('Episode')
                 ax1.set_ylabel('Total Reward')
@@ -117,17 +120,24 @@ if __name__ == "__main__":
                 ax3.set_title('Average Speed Dif Per Episode')
                 ax3.grid()
 
-                plt.show()
+                plt.show(block=False)
+                plt.pause(3)
+                plt.close()
 
-        if e%100 == 0 and not test:
+        if e % 100 == 0 and not test:
+            print("Episode:", e, "Saving Model")
             RL.save_models(e)
         if e % 10 == 0:
             env.render()
             time.sleep(2)
-        print(f'Done aircraft: {len(env.done)}')  
+        print(f'Done aircraft: {len(env.done)}')
         print(f'Done aircraft IDs: {env.done}')
-        print(Num_Train,'ended in', step, 'runs, with', np.mean(np.array(conf_list)), 'conflicts (rolling av100), reward (rolling av100)=', np.mean(np.array(tot_rew_list)), 'speed dif (rolling av100)', np.mean(np.array(average_speed_dif)))
+        print(Num_Train, 'ended in', step, 'runs, with', np.mean(np.array(conf_list)), 'conflicts (rolling av100), reward (rolling av100)=', np.mean(
+            np.array(tot_rew_list)), 'speed dif (rolling av100)', np.mean(np.array(average_speed_dif)))
         RL.train(memory)
-    np.savetxt('./results/data/total_reward.csv', np.array(tot_rew_list), delimiter=',')
-    np.savetxt('./results/data/conflicts.csv', np.array(conf_list), delimiter=',')
-    np.savetxt('./results/data/speed_dif.csv', np.array(speeddif_list), delimiter=',')
+    np.savetxt('./results/data/total_reward.csv',
+               np.array(tot_rew_list), delimiter=',')
+    np.savetxt('./results/data/conflicts.csv',
+               np.array(conf_list), delimiter=',')
+    np.savetxt('./results/data/speed_dif.csv',
+               np.array(speeddif_list), delimiter=',')

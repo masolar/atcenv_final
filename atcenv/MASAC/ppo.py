@@ -85,7 +85,7 @@ class MaSacAgent:
         #rewards = torch.tensor(list(memory[:, 2]), dtype=torch.float32)
         #masks = torch.tensor(list(memory[:, 3]), dtype=torch.float32)
         values = self.critic(states)
-        values = torch.reshape(values, (-1,))
+        values = values.squeeze(2)
 
         returns, advants = self.get_gae(rewards, masks, values)
         old_actions, old_log_prob = self.actor(states.to(self.device))

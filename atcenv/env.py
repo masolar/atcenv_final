@@ -45,7 +45,7 @@ class Environment(gym.Env):
                  max_area: Optional[float] = 200. * 200.,
                  min_area: Optional[float] = 125. * 125.,
                  max_speed: Optional[float] = 500.,
-                 min_speed: Optional[float] = 400,
+                 min_speed: Optional[float] = 300,
                  max_episode_len: Optional[int] = 300,
                  min_distance: Optional[float] = 5.,
                  distance_init_buffer: Optional[float] = 5.,
@@ -98,10 +98,10 @@ class Environment(gym.Env):
         """
         
         # Vectorized implementation of the below code
-        new_track = self.flights.track + ((~self.done).astype(float) * np.expand_dims(action[:, 0], 1)) * MAX_BEARING / 8
-        self.flights.track = (new_track + u.circle) % u.circle
+        #new_track = self.flights.track + ((~self.done).astype(float) * np.expand_dims(action[:, 0], 1)) * MAX_BEARING / 8
+        #self.flights.track = (new_track + u.circle) % u.circle
 
-        self.flights.airspeed += ((~self.done).astype(float) * np.expand_dims(action[:, 1], 1)) * (self.max_speed - self.min_speed) / 3
+        self.flights.airspeed += ((~self.done).astype(float) * np.expand_dims(action[:, 0], 1)) * (self.max_speed - self.min_speed) / 3
         self.flights.airspeed = np.clip(self.flights.airspeed, self.min_speed, self.max_speed) # Limit airspeed to the limits
         
         # RDC: here you should implement your resolution actions
@@ -277,11 +277,15 @@ class Environment(gym.Env):
         """
 
         distances = self.flights.distance_all
-
-        self.conflicts = distances < self.min_distance
         
-        np.fill_diagonal(self.conflicts, False)
+        # Remove self collisions
+        np.fill_diagonal(distances, np.inf)
+        
+        self.conflicts = distances < self.min_distance
 
+        # Remove conflicts with done planes
+        self.conflicts = np.logical_and(self.conflicts, ~self.done.T)
+        
     def update_done(self) -> None:
         """
         Updates the set of flights that reached the target
@@ -422,11 +426,11 @@ class Environment(gym.Env):
             self.viewer.add_geom(sector)
 
         # add current positions
-        for i, f in enumerate(self.flights):
-            if i in self.done:
+        for i in range(self.num_flights):
+            if self.done[i]:
                 continue
 
-            if i in self.conflicts:
+            if np.sum(self.conflicts[i, :]) > 0:
                 color = RED
             else:
                 color = BLUE
@@ -434,13 +438,13 @@ class Environment(gym.Env):
             circle = rendering.make_circle(radius=self.min_distance / 2.0,
                                            res=10,
                                            filled=False)
-            circle.add_attr(rendering.Transform(translation=(f.reported_position.x,
-                                                             f.reported_position.y)))
+            circle.add_attr(rendering.Transform(translation=(self.flights.reported_position[i, 0],
+                                                             self.flights.reported_position[i, 1])))
             circle.set_color(*BLUE)
 
-            plan = LineString([f.reported_position, f.target])
+            plan = LineString([self.flights.reported_position[i, :], self.flights.target[i, :]])
             self.viewer.draw_polyline(plan.coords, linewidth=1, color=color)
-            prediction = LineString([f.reported_position, f.prediction])
+            prediction = LineString([self.flights.reported_position[i, :], self.flights.prediction[i, :]])
             self.viewer.draw_polyline(prediction.coords, linewidth=4, color=color)
 
             self.viewer.add_onetime(circle)

@@ -12,7 +12,7 @@ class PPO:
     """
     def __init__(self):
         # Initialize networks
-        self.actor = Actor(15, 2)
+        self.actor = Actor(15, 1)
         self.critic = Critic(15)
         
     def train(self, 
@@ -24,7 +24,8 @@ class PPO:
               updates_per_batch: int,
               minibatch_size: int,
               gamma: float,
-              device: torch.device):
+              device: torch.device,
+              debug: bool):
         """
         Given an environment, trains the actor and critic on the environment.
         
@@ -59,7 +60,7 @@ class PPO:
         for epoch in tqdm(range(epochs)):
             buffer.clear()
 
-            self._generate_batch(env, buffer, gamma, device)
+            self._generate_batch(env, buffer, gamma, device, debug)
             
             """
             It's been suggested to train PPO using minibatches to help with memory
@@ -129,7 +130,8 @@ class PPO:
                         env: gym.Env,  
                         buffer: TrajectoryBuffer,
                         gamma: float,
-                        device: torch.device):
+                        device: torch.device,
+                        debug: bool):
         """
         Generates some number of trajectories in the given environment
 
@@ -181,6 +183,11 @@ class PPO:
 
                 prev_obs = obs
                 prev_obs_t = torch.Tensor(prev_obs).to(device)
+
+                if debug:
+                    env.render()
+            if debug:
+                env.close()
         
             rewards_to_go = self._compute_rew_to_go(episode_rewards, gamma)
 

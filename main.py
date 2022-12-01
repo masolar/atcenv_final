@@ -20,6 +20,8 @@ def parse_args(parser: argparse.ArgumentParser):
     parser.add_argument('--updates_per_batch', type=int, default=5)
     parser.add_argument('--minibatch_size', type=int, default=256)
     parser.add_argument('--gamma', type=float, default=.99)
+    parser.add_argument('--debug', action='store_true')
+
     # parse arguments
     return parser.parse_args()
 
@@ -42,4 +44,4 @@ if __name__ == "__main__":
 
     RL = PPO()
     
-    metrics = RL.train(env, args.episodes, args.a_lr, args.c_lr, args.trajectories_per_batch, args.updates_per_batch, args.minibatch_size, args.gamma, device)
+    metrics = RL.train(env, args.episodes, args.a_lr, args.c_lr, args.trajectories_per_batch, args.updates_per_batch, args.minibatch_size, args.gamma, device, args.debug)
